@@ -1,0 +1,388 @@
+
+module userInputs
+
+    using dipoleDipole
+    export getUserParams, getTestParams, buildParamStruct
+
+    mutable struct materialParams
+
+        j::Float64
+        h::Float64
+        a::Float64
+        dz::Float64
+        ed::Float64
+        nx::Int
+        ny::Int
+        nz::Int
+        pbc::Float64
+        vdd
+
+        function materialParams( arr )
+
+            if arr[5] != 0.0
+                v = vddMatrices( Int(arr[6]) , Int(arr[7]), 1.0==arr[9])
+                return new( arr[1], arr[2], arr[3], arr[4], arr[5], 
+                    Int(arr[6]), Int(arr[7]), Int(arr[8]), arr[9], v )
+            else
+                return new( arr[1], arr[2], arr[3], arr[4], arr[5], 
+                    Int(arr[6]), Int(arr[7]), Int(arr[8]), 1.0==arr[9], [])       
+            end 
+        end
+
+    end
+
+
+    mutable struct llgParams
+
+        tMax::Int64
+        dt::Float64
+        saveEvery::Float64
+        tol::Float64
+        damp::Float64
+        temp::Float64
+        nRuns::Int64
+        parallel::Int64
+
+        function llgParams( arr )
+            return new( Int(arr[1]), arr[2], arr[3], arr[4], arr[5], arr[6],
+                arr[7],arr[8] )
+        end
+
+    end
+
+    mutable struct faParams
+
+        sMax::Int64
+        param::Float64
+        tol::Float64
+        temp::Float64
+        nRuns::Float64
+        parallel::Float64
+
+        function faParams( arr )
+            return new( arr[1], arr[2], arr[3], arr[4], arr[5], arr[6] )
+        end
+
+    end
+
+    mutable struct icParams
+
+        type::String
+        r::Float64
+        gamma::Float64
+        px::Int64
+        py::Int64
+        
+        function icParams( arr )
+            return new( arr[1], arr[2], arr[3], arr[4], arr[5] )
+        end
+    end
+
+    mutable struct pinningParams
+
+        hPin::Float64
+        px::Int64
+        py::Int64
+        
+        function pinningParams( arr )
+            return new( arr[1], arr[2], arr[3] )
+        end
+
+    end
+
+    mutable struct defectParams
+
+        t::Float64
+        strength::Float64
+        width::Float64
+        dx::Int64
+        dy::Int64
+
+        function defectParams( arr )
+            return new( arr[1], arr[2], arr[3], arr[4], arr[5] )
+        end
+
+    end
+
+    mutable struct saveChoices
+
+        totE::Int
+        excE::Int
+        zeeE::Int
+        dmiE::Int
+        pmaE::Int
+        ddiE::Int
+        magn::Int
+        size::Int
+        qCharge::Int
+        location::Int
+        spinField::Int
+
+        function saveChoices( arr )
+            return new( arr[1], arr[2], arr[3], arr[4], arr[5],
+                arr[6], arr[7], arr[8], arr[9], arr[10], arr[11] )
+        end
+
+    end
+
+    # All parameters stored in this struct. Pass this struct 
+    # to all the functions. 
+    struct params
+
+        mp 
+        llg
+        fa 
+        ic
+        pin 
+        defect 
+        save 
+
+        function params( arr )
+            return new( arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7] )
+        end
+    end
+
+    function getCompuationParams( inputType, paramList::Array{String,1}, defaultList)
+
+        ans = getUserInput( String, string("\nEnter paramters ", [i for i in paramList], "? y/n ")  )
+        
+        # If user wants to enter parameters, get them
+        if ans == "y"
+            paramVals = zeros( length(paramList) )
+
+            for i in 1:length(paramList)
+
+                paramVals[i] = getUserInput( typeof(defaultList[i]), string( paramList[i], " = ") )
+
+            end
+
+            return inputType( paramVals )
+
+        # Otherwise set default values
+        else
+            
+            println( string("Setting default values ", [j for j in defaultList] ) )
+            return inputType( defaultList )
+
+        end      
+
+    end
+
+    function getUserInput( T=String, msg="" )
+        
+        print( "$msg" )
+
+        if T == String
+            return readline()
+        else
+            try
+                return parse(T,readline())
+            catch
+                println("Sorry, I could not interpret your answer. Please try again")
+                getUserInput(T,msg)
+            end
+        end
+
+    end
+
+    function modifyMatParam!(mat, val, num)
+
+        if num == 1
+            mat.h = val
+        elseif num == 2
+            mat.a = val
+        elseif num == 3
+            mat.dz = val
+        elseif num == 4
+            mat.ed = val
+        elseif num == 5
+            mat.nx = val
+        elseif num == 6
+            mat.ny = val
+        elseif num == 7
+            mat.nz = val
+        else
+            println(string(" Error modifying material parameter struct. No ", num, "th value found. Quitting."))
+            quit()
+        end
+
+    end
+
+    function getTestParams()
+
+        myMatParams = materialParams([1.0, -0.2, 0.1, 0.01, 0.01, 64, 64, 1, true] )
+        myLlgParams = llgParams([10, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0])
+        myFaParams = []
+        myICParams = icParams( ["skyrmion", 5, pi/2 , myMatParams.nx/2, myMatParams.ny/2] )
+        myPinningParams = pinningParams( [0.1, 32, 32] )
+        myDefectParams = defectParams( [1.0, -0.7, 1.0, 0, 0] )
+        mySaveChoices = saveChoices( [1,0,0,0,0,0,0,1,1,0,1] )
+
+        # Now put all of the user choices into one struct 
+        allParams = params( [myMatParams, myLlgParams, myFaParams, myICParams, myPinningParams, 
+            myDefectParams, mySaveChoices] )
+
+        return allParams
+
+    end
+
+    function buildParamStruct( matList, llgList, faList, icList, pinList, defectList, saveList )
+
+        myMatParams = materialParams( matList )
+        myLlgParams = llgParams( llgList )
+        myFaParams = faParams( faList )
+        myICParams = icParams( icList )
+        myPinningParams = pinningParams( pinList )
+        myDefectParams = defectParams( defectList )
+        mySaveChoices = saveChoices( saveList )
+
+        # Now put all of the user choices into one struct 
+        allParams = params( [myMatParams, myLlgParams, myFaParams, myICParams,
+            myPinningParams, myDefectParams, mySaveChoices] )
+
+        return allParams
+
+    end
+
+
+    function getUserParams()
+        
+        ##################################################################################################
+        # Begin user prompts
+        #
+        # Ask user to input data
+        # The user may want to run the computation for various different parameters 
+        myMatParams = getCompuationParams(materialParams, ["J", "H", "A", "Dz", "Ed", "Nx", "Ny", "Nz","pbc" ], 
+        [1.0, -0.2, 0.1, 0.01, 0.0, 64, 64, 1, true] )
+
+        ans = getUserInput( String, string("\nWould you like to run over a range of parameters? Enter n to choose 'no' and run for only selected choices. y/n ")  )
+
+        if ans == "y"
+
+            ans = getUserInput( String, string("\nSelect which values you would like to vary:
+            1 = Zeeman Field
+            2 = DMI constant
+            3 = PMA constant
+            4 = DDI constant
+            5 = Nx (Lattice size in x)
+            6 = Ny (Lattice size in y)
+            7 = Nz
+        
+            Enter your choice(s) separated by commas: ")  )
+
+            varyChoices = parse.(Int64, split(ans,",") )
+        
+            for var in varyChoices
+                ans = getUserInput( String, string( "\nEnter the start, step size, and end value of choice ", var, " separated by commas " ) )
+                
+                paramRange = parse.( Float64, split(ans,",") )
+                paramVals = [ paramRange[1]:paramRange[2]:paramRange[3]; ]
+
+                modifyMatParam!( myMatParams, paramVals, var )
+
+            end
+        end
+
+        ans = getUserInput( String, string( "\nComputation type? 
+            1 = Landau Lifshitz, 
+            2 = Field Alignment relaxation ") )
+
+        if ans == "1"
+
+            myLlgParams = getCompuationParams(llgParams, [ "Max iterations", "Step size", "Skip size", 
+                "Tolerance", "Damping", "Temperature", "Number of runs", "Parallelize (1 or 0)" ], 
+                [10000, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0] )
+            myFaParams = []
+
+        elseif ans == "2"
+
+            myFaParams = getCompuationParams(faParams, ["Max iterations", "FA Param","Num rotations", 
+                "Temperature", "Number of runs", "Parallelize (1 or 0)" ], [10000, 0.03, 10, 0.0, 1, 0] )
+            myLlgParams = []
+
+        else
+            println("Invalid input. Quitting.")
+            exit()
+        end
+
+        # Initial condition
+        myICParams = getCompuationParams( icParams, 
+            ["Initial condition", "lambda", "gamma", "x position", "y position"], 
+            ["skyrmion", 5, pi/2 , myMatParams.nx/2, myMatParams.ny/2])
+
+
+        ################################################
+        # Problem-specific options start here
+
+        # Ask if the user wants to pin the skyrmion
+        ans = getUserInput( String, string("\nPin skyrmion? y/n ")  )
+            
+        # Get params. Default set pin field at center of the lattice
+        if ans == "y"
+            myPinningParams = getCompuationParams( pinningParams, ["H_pin", "X", "Y"], 
+                [0.01, myMatParams.nx/2 , myMatParams.ny/2] )
+        else
+            myPinningParams = []
+        end
+
+        # Is there a defect in the lattice
+        ans = getUserInput( String, string("\nPlace defect in the lattice? y/n ")  )
+
+        # If user wants to enter defect parameters, get them
+        if ans == "y"
+            myDefectParams = getCompuationParams( defectParams, 
+                ["type", "strength (relative to J)", "width", "x position", "y position"], 
+                ["gaussian", -0.5, 1.0, 0, 0] )
+        else
+            myDefectParams = []
+        end
+
+        # Choose what to save
+        ans = getUserInput( String, string("\nSelect which values you would like to save during the computation. (Note that choosing too many may increase computation time.) The options are: 
+            1 = Total energy
+            2 = Zeeman Energy
+            3 = Exchange energy
+            4 = DMI energy
+            5 = PMA energy
+            6 = DDI energy
+            7 = Magnetization
+            8 = Effective Size
+            9 = Topological charge
+            10 = Postion (only for skyrmion initial condition)
+            11 = Spin field
+            
+            Enter your choices in a comma-separated list: ")  )
+
+        # If user does not select anything, move on
+        if ans == ""
+            println("\nNo saved data.")
+            mySaveChoices = []
+
+        else 
+
+            # If user makes multiple choices, parse them into an Int array
+            if occursin( ",",ans )
+                userChoices = parse.(Int64, split(ans,",") )
+
+            # If user makes 1 choice, store it in a 1 element array
+            else
+                userChoices = [ parse(Int64,ans) ]
+            end
+
+            userChoicesBool = zeros(Int64, 11)
+            [userChoicesBool[i] = 1 for i in userChoices]
+            mySaveChoices = saveChoices( userChoicesBool )
+                
+
+        end
+
+        # Now put all of the user choices into one struct 
+        allParams = params( [myMatParams, myLlgParams, myFaParams, myICParams, myPinningParams, myDefectParams, mySaveChoices] )
+
+
+        return allParams
+
+    end
+    
+    
+end
