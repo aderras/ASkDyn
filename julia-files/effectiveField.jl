@@ -229,7 +229,7 @@ module effectiveField
         # If there is a defect and the point of interest is within the range
         # of the defect, change the effective exchange field
         defExists,kx,ky,aDmi,dDmi = defParams
-        if (1.0 == defExists) && sqrt((nx-kx)^2+(ny-ky)^2) <= dDmi  
+        if (2.0 == defExists) && sqrt((nx-kx)^2+(ny-ky)^2) <= dDmi  
             for i in 1:3 effField[i] = (1 + aDmi)*effField[i] end
         end
 

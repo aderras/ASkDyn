@@ -1,6 +1,11 @@
 #!/usr/bin/env julia1
 push!(LOAD_PATH, pwd())
 
+#=
+  Add a relaxation step before you jump into evaluation...
+
+=#
+
 using userInputs, Distributed, spinDynamics
 
 userParams = getUserParams()
@@ -36,7 +41,7 @@ if userParams.llg.parallel == 1
   # Import the module into the current scope by using import 
   # with a dot. Then call the parallel evaluation. 
   using .runScript 
-  runScript.dosomething( userParams )
+  runScript.evaluate( userParams )
 
 else 
 
