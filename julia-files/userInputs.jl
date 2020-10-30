@@ -1,4 +1,16 @@
+#=
 
+    This module contains structs and functions related to parameters that are 
+    passed to the spin dynamics computation functions. 
+
+    Parameters are grouped by catagory and stored in structs. E.g. the 
+    materialParams struct contains the values for exchange interaction, 
+    external field, and shape of the array. 
+
+    All of the parameters are then group into one parent struct of the type 
+    "params." 
+
+=#
 module userInputs
 
     using dipoleDipole
@@ -21,7 +33,7 @@ module userInputs
         function materialParams( arr )
 
             if arr[5] != 0.0
-                v = vddMatrices( Int(arr[6]) , Int(arr[7]), 1.0==arr[9])
+                v = vddMatrices( Int(arr[6]) , Int(arr[7]), Int(arr[8]), 1.0==arr[9])
                 return new( arr[1], arr[2], arr[3], arr[4], arr[5], 
                     Int(arr[6]), Int(arr[7]), Int(arr[8]), arr[9], v )
             else
@@ -229,7 +241,7 @@ module userInputs
         elseif num == 9
             mat.pbc = val
         else
-            println(string(" Error modifying material parameter struct. No ", num, "th value found. Quitting."))
+            println(string("Error modifying material parameter struct. No ", num, "th value found. Quitting."))
             quit()
         end
 
@@ -246,7 +258,7 @@ module userInputs
         myPinningParams = pinningParams( [0.1, 32, 32] )
         myDefectParams = defectParams( [1.0, -0.7, 1.0, 0, 0] )
         mySaveChoices = saveChoices( [1,0,0,0,0,0,0,1,1,0,1] )
-        myParamRanges = paramRanges( [ [],[], [], [], [], [], [], [], [], [] ] )
+        myParamRanges = paramRanges( [ [], [], [], [], [], [], [], [], [], [] ] )
 
         # Now put all of the user choices into one struct 
         allParams = params( [myMatParams, myLlgParams, myFaParams, myICParams, myPinningParams, 
@@ -329,7 +341,6 @@ module userInputs
 
         ################################################
         # Problem-specific options start here
-
         # Ask if the user wants to pin the skyrmion
         ans = getUserInput( String, string("\nPin skyrmion? y/n ")  )
             

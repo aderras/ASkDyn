@@ -3,26 +3,24 @@ module dipoleDipole
     using FFTW, PaddedViews
     export FHD, convfft, buildVD, vddMatrices
 
-    function vddMatrices(NNx::Int,NNy::Int,pbc::Bool=false) 
+    function vddMatrices(Nx::Int,Ny::Int,Nz::Int,pbc::Bool=false) 
     
-    	Nx = NNx
-		Ny = NNy
-
         phixx = Array{Float32}(undef,2*Nx, 2*Ny)
         phiyy = Array{Float32}(undef,2*Nx, 2*Ny)
         phizz = Array{Float32}(undef,2*Nx, 2*Ny)
         phixy = Array{Float32}(undef,2*Nx, 2*Ny)
 
-        phixx = buildVD("xx",Nx,Ny,pbc)
-        phiyy = buildVD("yy",Nx,Ny,pbc)
-        phizz = buildVD("zz",Nx,Ny,pbc)
-        phixy = buildVD("xy",Nx,Ny,pbc)
+        phixx = buildVD("xx",Nx,Ny,Nz,pbc)
+        phiyy = buildVD("yy",Nx,Ny,Nz,pbc)
+        phizz = buildVD("zz",Nx,Ny,Nz,pbc)
+        phixy = buildVD("xy",Nx,Ny,Nz,pbc)
           
         return [phixx,phiyy,phizz,phixy]
         
     end
 
-    function buildVD( stype::String, Nx, Ny, pbc::Bool=false )
+    function buildVD( stype::String, Nx, Ny, Nz, pbc )
+
 
         if (Nx % 2 == Ny % 2 == 0)
             VD = zeros(2*Nx,2*Ny)
@@ -34,7 +32,7 @@ module dipoleDipole
 
             for i in -Nx+1:Nx-1
                 for j in -Ny+1:Ny-1
-                    VD[j+Ny,i+Nx] = Phipbc(i,j,stype,Nx,Ny)
+                    VD[j+Ny,i+Nx] = Phipbc(i,j,stype,Nx,Ny,Nz)
                 end
             end
 
@@ -42,7 +40,7 @@ module dipoleDipole
 
             for i in -Nx+1:Nx-1
                 for j in -Ny+1:Ny-1
-                    VD[j+Ny,i+Nx] = Phi(i,j,stype)
+                    VD[j+Ny,i+Nx] = Phi(i,j,stype,Nz)
                 end
             end
 
@@ -61,7 +59,7 @@ module dipoleDipole
     @inline Fzz(nx,ny,Tx,Ty) = -nx*ny*(nx^2+ny^2)/(Tx*Ty*(nx^2)*(ny^2)*sqrt(nx^2 + ny^2))
     @inline Fxy(nx,ny,Tx,Ty) = -1.0/(Tx*Ty*sqrt(nx^2 + ny^2 ))
 
-    function Phipbc(nx::Int,ny::Int,stype::String, Nx, Ny)
+    function Phipbc(nx::Int,ny::Int,stype::String, Nx, Ny, Nz)
 
         paramPbcX = round(Int,2000/Nx) #float(Nx)
         paramPbcY = round(Int,2000/Nx) #float(Ny)
@@ -72,7 +70,7 @@ module dipoleDipole
         Tx = Nx
         Ty = Ny
 
-        dim = 10
+        dim = Nz
         dimFloat = float(dim)
         sum = 0.
 
@@ -84,7 +82,7 @@ module dipoleDipole
 
             for iy in -paramPbcY:paramPbcY
             
-               sum = sum + Phi(nx + ix*Nx, ny + iy*Ny, stype)
+               sum = sum + Phi(nx + ix*Nx, ny + iy*Ny, stype, Nz)
 
             end
 
@@ -106,9 +104,9 @@ module dipoleDipole
     end
 
     # Returns the xth and yth matrix element of phi
-    function Phi(nx::Int,ny::Int,stype::String)
+    function Phi(nx::Int, ny::Int, stype::String, Nz)
 
-        dim = 10
+        dim = Nz
         dimFloat = float(dim)
         sum = 0.
 
@@ -162,7 +160,6 @@ module dipoleDipole
         return tot
     end
 
-  
 
     function FHD(mat,phi,pbc::Bool=false)
 
