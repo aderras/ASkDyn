@@ -39,7 +39,7 @@ module modifyFiles
     #
     function writeDataH5( filename::String, data )
 
-        file = h5open(pwd()*filename,"w")
+        file = h5open(filename,"w")
         write(file,"Dataset1",data)
         close(file)
 

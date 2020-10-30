@@ -28,7 +28,7 @@ module spinDynamics
 
         maxLoop = params.llg.tMax
 
-        #########################################################
+        ###########################################################################
         # Make arrays to store data based on what user requested
         # Can't think of a smarter way to do this....
         j,h,a,dz,ed,nx,ny,nz,pbc,vdd = 
@@ -63,7 +63,7 @@ module spinDynamics
         enArray = zeros( maxLoop )
         qArray = zeros( maxLoop )
 
-        ###############################################################
+        ##########################################################################
         # Begin computation
         # Stopping criteria: energy converges to within some tolerance
         # or topological charge becomes negative
@@ -128,12 +128,16 @@ module spinDynamics
 
         end
 
-        # For loop ended, so save data. 
-        reldir = "/data/"
+        # For loop ended, so save data. By default, saves to parentDirectory() + "/data/"
+        reldir = string(dirname(pwd()),"/data/")
+
+        # Save with a timestamp and random number generator if you are running the same computation
+        # multiple times. (Not using right now because still testing and want to overwrite saved 
+        # files instead of filling up the folder with distinct data.)
         timestampString = string(Dates.format(Dates.now(),"HH_MM_SS"),
                 trunc(Int,rand()*10000))
 
-        # Define file suffix to distinguish the files 
+        # Define file suffix to distinguish the files The following contains defect info
         # filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",a,"_DZ=",dz,"_ED=",round(ed,digits=5),"_DEFECT=",
         #         params.defect.t,"_D-X=",params.defect.dx,"_D-Y=",params.defect.dy,"_D-STRENGTH=",
         #         params.defect.strength,"_D-WIDTH=",params,defect,width,"_",timestampString,"_.h5")
