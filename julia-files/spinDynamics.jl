@@ -5,9 +5,19 @@ module spinDynamics
 
     using modifyFiles, energy, topologicalCharge, LLequation,
     magnetization, rungeKutta, LLequation, normalize, noiseRotation, Dates,
-    effectiveSize
+    effectiveSize, initialCondition, Distributed
     
-    export evaluateLL!, runRelaxation!, pulseNoiseStep!
+    export evaluateSpinDynamics, evaluateLL!, runRelaxation!, pulseNoiseStep!
+
+    # Given a struct of parameters, compute the spin dynamics
+    function evaluateSpinDynamics( p )
+
+        s0 = buildInitial( p.ic, p.mp )
+        evaluateLL!( s0, p )
+
+        println("Completed eval on worker ", myid())
+
+    end
 
     # The following function evaluates the LLG equation. In the comments you'll find
     # two options: pulseNoise or rk4. For zero temperature relaxation, it doesn't matter
@@ -15,7 +25,6 @@ module spinDynamics
     #
     # inputs: mat = (N,N,3) initial condition, params 
     function evaluateLL!( mat::Array{Float64,3}, params )
-
 
         maxLoop = params.llg.tMax
 
@@ -50,7 +59,7 @@ module spinDynamics
             locArray = zeros( maxLoop*2 )
         end
 
-        # Have to store energy and topological charge. 
+        # Always to store energy and topological charge, so make arrays for those 
         enArray = zeros( maxLoop )
         qArray = zeros( maxLoop )
 

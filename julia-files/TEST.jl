@@ -1,25 +1,46 @@
 #!/usr/bin/env julia1
 push!(LOAD_PATH, pwd())
 
-module main_run
+using userInputs, Distributed, spinDynamics
 
-  using initialCondition, userInputs, spinDynamics
+testParams = getTestParams()
 
-  params = getUserParams()
-  # params = getTestParams()
+println( "Test params mp: ", testParams.mp )
+println( "Test params llg: ", testParams.llg )
+println( "Param ranges: ", testParams.range )
 
-  # # println( params.mp )
-  # println( params.llg )
-  # println( params.fa )
-  # println( params.ic )
-  # println( params.pin )
-  # println( params.defect )
-  # println( params.save )
+if testParams.llg.parallel == 1
 
-  s0 = buildInitial(params.ic, params.mp)
+  addprocs( testParams.llg.numCores )
+  println( "Initializing parallel cores. Number of processers = ", nprocs(),", number of workers = ", nworkers() )
 
-  # println( [getfield( params.mp,x ) for x in fieldnames( typeof(params.mp) ) ] )
-  # println( calcEnergy(s0, params.mp, params.defect) )
-  evaluateLL!( s0, params )
+    @everywhere module Test
+    push!(LOAD_PATH, pwd())
+
+    using userInputs, spinDynamics, Distributed
+
+    function dosomething(testParams)
+
+      allParams = []
+      getParamList!( testParams, allParams )
+
+      pmap( evaluateSpinDynamics, allParams )
+
+    end
+
+  end
+
+  using .Test 
+  Test.dosomething(testParams)
+
+else 
+
+  allParams = []
+  getParamList!( testParams, allParams )
+
+  map( evaluateSpinDynamics, allParams )
 
 end
+
+
+

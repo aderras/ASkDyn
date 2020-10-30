@@ -1,25 +1,51 @@
 #!/usr/bin/env julia1
 push!(LOAD_PATH, pwd())
 
-module main_run
+using userInputs, Distributed, spinDynamics
 
-  using initialCondition, userInputs, spinDynamics
+userParams = getUserParams()
 
-  params = getUserParams()
-  # params = getTestParams()
+# If user selected parallel computing, launch cores 
+if userParams.llg.parallel == 1
 
-  # # println( params.mp )
-  # println( params.llg )
-  # println( params.fa )
-  # println( params.ic )
-  # println( params.pin )
-  # println( params.defect )
-  # println( params.save )
+  addprocs( userParams.llg.numCores )
+  println( "\nInitializing parallel cores. Number of processers = ", 
+    nprocs(),", number of workers = ", nworkers() )
 
-  s0 = buildInitial(params.ic, params.mp)
+  # Need to define a module with the @everywhere macro so
+  # every worker can run separately
+  @everywhere module runScript
 
-  # println( [getfield( params.mp,x ) for x in fieldnames( typeof(params.mp) ) ] )
-  # println( calcEnergy(s0, params.mp, params.defect) )
-  evaluateLL!( s0, params )
+    # Set the load path for every worker to pwd()
+    push!(LOAD_PATH, pwd())
+
+    using userInputs, spinDynamics, Distributed
+
+
+    function evaluate( p )
+
+      allParams = []
+      getParamList!( p, allParams )
+
+      pmap( evaluateSpinDynamics, allParams )
+
+    end
+
+  end
+
+  # Import the module into the current scope by using import 
+  # with a dot. Then call the parallel evaluation. 
+  using .runScript 
+  runScript.dosomething( userParams )
+
+else 
+
+  # If the user did not request parallel evaluation, run 
+  # sequentially. Still need to get a list of all the 
+  # parameters in case user requested multiple values. 
+  allParams = []
+  getParamList!( userParams, allParams )
+
+  map( evaluateSpinDynamics, allParams )
 
 end
