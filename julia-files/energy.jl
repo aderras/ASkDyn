@@ -201,7 +201,7 @@ module energy
             for j in 1:n       
                 for i in 1:m-1
                     for k in 1:p
-                        en += -J * (1 + aJ * exp( -((i-jx)^2 + (j-jy)^2)/dJ^2 ) ) * mat[k,i,j] * mat[k,i+1,j]
+                        en += -J * (1 + aJ * exp( -((i-jx + 1/2)^2 + (j-jy)^2)/dJ^2 ) ) * mat[k,i,j] * mat[k,i+1,j]
                     end
                 end
             end
@@ -209,7 +209,7 @@ module energy
             for j in 1:n-1    
                 for i in 1:m   
                     for k in 1:p
-                        en += -J * (1 + aJ * exp( -((i-jx)^2 + (j-jy)^2)/dJ^2 ) ) * mat[k,i,j] * mat[k,i,j+1]
+                        en += -J * (1 + aJ * exp( -((i-jx)^2 + (j-jy - 1/2)^2)/dJ^2 ) ) * mat[k,i,j] * mat[k,i,j+1]
                     end
                 end
             end
