@@ -8,6 +8,7 @@ push!(LOAD_PATH, pwd())
 
 using userInputs, Distributed, spinDynamics
 
+# Call the function that asks for user inputs
 userParams = getUserParams()
 
 # If user selected parallel computing, launch cores 
@@ -25,7 +26,6 @@ if userParams.llg.parallel == 1
     push!(LOAD_PATH, pwd())
 
     using userInputs, spinDynamics, Distributed
-
 
     function evaluate( p )
 

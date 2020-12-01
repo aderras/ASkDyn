@@ -5,7 +5,7 @@
 
     Parameters are grouped by catagory and stored in structs. E.g. the 
     materialParams struct contains the values for exchange interaction, 
-    external field, and shape of the array. 
+    external field, shape of the array, etc. 
 
     All of the parameters are then group into one parent struct of the type 
     "params." This parent struct is passed to different functions, and can 
@@ -230,7 +230,7 @@ module userInputs
 
     # Request a series of parameters with the following function.
     #
-    # in: aramType = type of parameter struct you will be constructing,
+    # in: paramType = type of parameter struct you will be constructing,
     # paramList = array of strings containing parameters to request, 
     # defaultList = default values ot paramType. Types of defaultList must 
     # reflect the type required in the parameter struct 
@@ -425,7 +425,9 @@ module userInputs
         end
 
         # Choose what to save
-        ans = getUserInput( String, string("\nSelect which values you would like to save during the computation. (Note that choosing too many may increase computation time.) The options are: 
+        ans = getUserInput( String, string("\nSelect which values you would like to save",
+            " during the computation. (Note that choosing too many may increase computation",
+            " time.) The options are: 
             1 = Total energy
             2 = Exchange Energy
             3 = Zeeman energy
@@ -438,7 +440,7 @@ module userInputs
             10 = Postion (only for skyrmion initial condition)
             11 = Spin field
             
-            Enter your choices in a comma-separated list: ")  )
+            Enter your choices separated by commas: ")  )
 
         # If user does not select anything, move on
         if ans == ""
@@ -562,7 +564,5 @@ module userInputs
 
         end
     end
-    
-
-    
+ 
 end
