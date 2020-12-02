@@ -9,7 +9,7 @@ module rungeKutta
     # the values mean.) 
     # Rather than return an array of the past n solutions, this modifies
     # the X0 array to constantly contain most recent solution. 
-    function rk4!( X0::Array{Float64,3}, f::Function, params )
+    function rk4!( X0::Array{Float64,3}, f::Function, params, flag = true )
         
         p, m, n = size(X0)
 
@@ -17,6 +17,11 @@ module rungeKutta
 
         tMax, hStep, nn, tol, lambda, T, nRuns, par = 
             [ getfield( llgParams, x ) for x in fieldnames( typeof(llgParams) ) ]
+        
+        # If running relaxation, use high damping
+        if flag 
+            lambda = 1.0
+        end
 
         # Initialize arrays for the RK steps
         K1 = Array{Float64}(undef,p,m,n)
@@ -38,19 +43,19 @@ module rungeKutta
             # has no t in RHS, so the t value is arbitrary.
             # t = t0 + k*h
 
-            f(t, X, K1, params) # function modifies last argument to equal RK Coeff
+            f(t, X, K1, params, flag) # function modifies last argument to equal RK Coeff
             K1 .= hStep*K1
 
             temp .= X .+ 0.5 .* K1
-            f(t + 0.5*hStep, temp , K2, params)
+            f(t + 0.5*hStep, temp , K2, params, flag)
             K2 .= hStep*K2
 
             temp .= X .+ 0.5 .* K2
-            f(t + 0.5*hStep, temp, K3, params)
+            f(t + 0.5*hStep, temp, K3, params, flag)
             K3 .= hStep*K3
 
             temp .= X .+ K3
-            f(t + hStep, temp, K4, params)
+            f(t + hStep, temp, K4, params, flag)
             K4 .= hStep*K4
 
             X .= X .+ (1/6).*K1 .+ (1/3).*K2 .+ (1/3).*K3 .+ (1/6).*K4

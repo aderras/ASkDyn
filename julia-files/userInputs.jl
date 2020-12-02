@@ -72,10 +72,12 @@ module userInputs
         ny
         nz
         pbc
+        jx  # current in x
+        jy  # current in y
 
         function paramRanges( arr )
             return new( arr[1], arr[2], arr[3], arr[4], arr[5], arr[6],
-                arr[7], arr[8], arr[9] )
+                arr[7], arr[8], arr[9], arr[10], arr[11] )
         end
 
 
@@ -161,6 +163,18 @@ module userInputs
 
     end
 
+    mutable struct currentParams
+
+        jx::Float64          # Current in the x direction
+        jy::Float64          # y direction
+        tf::Float64          # Cutoff time for current application
+
+        function currentParams( arr )
+            return new( arr[1], arr[2], arr[3] )
+        end
+
+    end
+
     # Choices for data saving
     mutable struct saveChoices
 
@@ -186,17 +200,18 @@ module userInputs
     # All parameters are stored in this struct.
     mutable struct params
 
-        mp      # materialParams
-        llg     # llgParams
-        fa      # faParams
-        ic      # icParams
-        pin     # pinningParams
-        defect  # defectParams
-        save    # saveChoices
-        range   # paramRanges
+        mp          # materialParams
+        llg         # llgParams
+        fa          # faParams
+        ic          # icParams
+        pin         # pinningParams
+        defect      # defectParams
+        save        # saveChoices
+        range       # paramRanges
+        current     # current
 
         function params( arr )
-            return new( arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7], arr[8] )
+            return new( arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7], arr[8], arr[9] )
         end
     end
 
@@ -282,6 +297,10 @@ module userInputs
             mat.nz = val
         elseif num == 9
             mat.pbc = val
+        elseif num == 10
+            mat.jx = val
+        elseif num == 11
+            mat.jy = val
         else
             println(string("Error modifying material parameter struct. No ", num, "th value found. Quitting."))
             quit()
@@ -296,18 +315,19 @@ module userInputs
     # areas when copying between structs has to be done. 
     function getTestParams()
 
-        myMatParams = materialParams([1.0, -0.2, 0.1, 0.01, 0.0, 64, 64, 1, true] )
-        myLlgParams = llgParams([10, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0, 0])
+        myMatParams = materialParams([1.0, -0.03, 0.05, 0.0, 0.0, 64, 64, 1, true] )
+        myLlgParams = llgParams([1000, 0.2, 5.0, 10^-6, 0.1, 0.0, 1, 0, 0])
         myFaParams = []
         myICParams = icParams( ["skyrmion", 5, pi/2 , myMatParams.nx/2, myMatParams.ny/2] )
-        myPinningParams = pinningParams( [0.1, 32, 32] )
-        myDefectParams = defectParams( [1.0, -0.7, 1.0, 0, 0] )
-        mySaveChoices = saveChoices( [1,0,0,0,0,0,0,1,1,0,1] )
-        myParamRanges = paramRanges( [ [], [], [], [], [], [], [], [], [], [] ] )
+        myPinningParams = pinningParams( [0.0, 32, 32] )
+        myDefectParams = defectParams( [0.0, 0.0, 0.0, 0, 0] )
+        mySaveChoices = saveChoices( [1,0,0,0,0,0,0,1,1,1,0] )
+        myParamRanges = paramRanges( [ [], [], [], [], [], [], [], [], [], [], [], [] ] )
+        myCurrentChoices = currentParams( [ 0.2, -0.1, 100 ] )
 
         # Now put all of the user choices into one struct 
         allParams = params( [myMatParams, myLlgParams, myFaParams, myICParams, myPinningParams, 
-            myDefectParams, mySaveChoices, myParamRanges] )
+            myDefectParams, mySaveChoices, myParamRanges, myCurrentChoices] )
 
         return allParams
 
@@ -340,6 +360,8 @@ module userInputs
                 7 = Ny (Lattice size in y)
                 8 = Nz
                 9 = pbc
+                10 = Current in x direction
+                11 - Current in y direction
             
                 Enter your choice(s) separated by commas: ")  )
 
@@ -424,6 +446,20 @@ module userInputs
             myDefectParams = []
         end
 
+
+        # Is there a defect in the lattice
+        ans = getUserInput( String, string("\nIntroduce current in lattice? y/n ")  )
+
+        # If user wants to introduce a current, get values 
+        if ans == "y"
+            myCurrentParams = getComputationParams( defectParams, 
+                ["Ix", "Iy"], 
+                [0.2, -0.1] )
+        else
+            myCurrentParams = []
+        end
+
+
         # Choose what to save
         ans = getUserInput( String, string("\nSelect which values you would like to save",
             " during the computation. (Note that choosing too many may increase computation",
@@ -467,7 +503,6 @@ module userInputs
         # Now put all of the user choices into one struct 
         allParams = params( [myMatParams, myLlgParams, myFaParams, myICParams, 
             myPinningParams, myDefectParams, mySaveChoices, myParamRanges] )
-
 
         return allParams
 

@@ -13,7 +13,7 @@ module LLequation
     # matrices used to compute DDI field
     #
     # outputs: nothing
-    function RHS!( t::Float64, mat::Array{Float64,3}, matRHS::Array{Float64,3}, params )
+    function RHS!( t::Float64, mat::Array{Float64,3}, matRHS::Array{Float64,3}, params, flag = true )
        
         p, m, n = size(mat)
 
@@ -33,6 +33,13 @@ module LLequation
         SDotH .= sum( mat.*Heff, dims=1 ) 
         
         fillRHS!( mat, Heff, SDotH, matRHS, lambda )
+
+
+        if (params.current.jx!=0 && flag==true ) || (params.current.jy!=0 && flag==true)
+
+            addCurrent!( mat, matRHS, params.current )
+
+        end
 
     end
     
@@ -54,6 +61,54 @@ module LLequation
             matRHS[3,i,j] = mat[1,i,j]*Heff[2,i,j] - mat[2,i,j]*Heff[1,i,j] + lambda*(Heff[3,i,j]-mat[3,i,j]*SDotH[1,i,j])
         end
 	
+    end
+
+    function addCurrent!( s::Array{Float64,3}, matRHS::Array{Float64,3}, current )
+
+        jx = current.jx
+        jy = current.jy
+
+        p, m, n = size(s)
+
+        for i in 1:m, j in 1:n
+
+            # Periodic BC always used
+            iNext = (i % m) + 1
+            if i==1
+                iPrev = m
+            else
+                iPrev = i-1 
+            end
+            jNext = (j+1) % n
+
+            if j==1
+                jPrev = n 
+            else 
+                jPrev = j-1
+            end
+            # First order finite difference used for DeltaX and Delta Y
+            # It would probably be faster to compute this matrix first, rather
+            # than in every iteration
+            DeltaX = (1/2) * ( s[:,iNext,j] - s[:,iPrev,j] )
+            DeltaY = (1/2) * ( s[:,i,jPrev] - s[:,i,jPrev] )
+
+            # Cross product of DeltaX and s_{i,j}
+            DeltaXCrossS = [ DeltaX[2]*s[3,i,j] - DeltaX[3]*s[2,i,j], 
+                                -DeltaX[1]*s[3,i,j] + DeltaX[3]*s[1,i,j], 
+                                DeltaX[1]*s[2,i,j] - DeltaX[2]*s[1,i,j] ]
+
+            DeltaYCrossS = [ DeltaY[2]*s[3,i,j] - DeltaY[3]*s[2,i,j], 
+                                -DeltaY[1]*s[3,i,j] + DeltaY[3]*s[1,i,j], 
+                                DeltaY[1]*s[2,i,j] - DeltaY[2]*s[1,i,j] ]
+
+            matRHS[1,i,j] += -jx* ( s[2,i,j]*DeltaXCrossS[3] - s[3,i,j]*DeltaXCrossS[2] ) - 
+                              jy* ( s[2,i,j]*DeltaYCrossS[3] - s[3,i,j]*DeltaYCrossS[2] )
+            matRHS[2,i,j] += -jx* ( -s[1,i,j]*DeltaXCrossS[3] + s[3,i,j]*DeltaXCrossS[1] ) - 
+                              jy* ( -s[1,i,j]*DeltaYCrossS[3] + s[3,i,j]*DeltaYCrossS[1] )
+            matRHS[3,i,j] += -jx* ( s[1,i,j]*DeltaXCrossS[2] - s[2,i,j]*DeltaXCrossS[1] ) - 
+                              jy* ( s[1,i,j]*DeltaYCrossS[2] - s[2,i,j]*DeltaYCrossS[1] )
+        end
+
     end
 
 end

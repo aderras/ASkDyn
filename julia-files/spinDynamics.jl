@@ -34,6 +34,12 @@ module spinDynamics
         j,h,a,dz,ed,nx,ny,nz,pbc,vdd = 
             [ getfield( params.mp, x ) for x in fieldnames( typeof(params.mp) ) ]
 
+
+        # Directory where results are saved. By default, saves to parentDirectory() + "/data/"
+        reldir = string(dirname(pwd()),"/data/")
+        filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",a,"_DZ=",dz,"_ED=",
+            round(ed,digits=5),"_JX=",params.current.jx,"_JY=",params.current.jy,"_.h5")
+
         if params.save.excE == 1.0
             excArray = zeros( maxLoop )
         end
@@ -65,6 +71,12 @@ module spinDynamics
 
         ##########################################################################
         # Begin computation
+        # First, run relaxation on the spin lattice to find the stable skyrmion 
+        # configuration
+        println( "Running relaxation on the spin lattice " )
+        @time runRelaxation!( mat, params )
+
+
         # Stopping criteria: energy converges to within some tolerance
         # or topological charge becomes negative
         for i in 1:maxLoop
@@ -89,47 +101,34 @@ module spinDynamics
             if params.save.ddiE == 1.0
                 ddiArray = ddiEnergy( mat, ed, vdd )
             end
-
-            # If the user asked to save all the energies 
-            # independently, then just sum those numbers.
-            # Otherwise calculate the total energy
-            if params.save.excE == 1.0 &&
-                params.save.zeeE == 1.0 &&
-                params.save.dmiE == 1.0 &&
-                params.save.pmaE == 1.0 &&
-                params.save.ddiE == 1.0
-
-                enArray[i] = excArray[i] + zeeArray[i] +
-                    dmiArray[i] + pmaArray[i] + ddiArray[i]
-
-            else 
-                enArray[i] = calcEnergy( mat, params.mp, params.defect )
-            end
-
             if params.save.magn == 1.0
                 magnArray[i] = calcM( mat )
             end
             if params.save.size == 1.0
                 sizeArray[i] = calcEffectiveSize( mat )
             end
-            
             if params.save.location == 1.0
                 @views maxPos = argmax( mat[3,:,:] )
                 locArray[(i*2-1)] = maxPos[1]
                 locArray[i*2] = maxPos[2]
             end
+            if params.save.spinField == 1.0 
+                writeDataH5(string(reldir,"spin-field-i=",i,"_",filesuffix),mat)
+            end
 
+            enArray[i] = calcEnergy( mat, params.mp, params.defect )
+           
             qArray[i] = calcQ( mat )
 
-            # Check for collapse
+            # println("i = ", i, ", Q = ", qArray[i], ", E = ", enArray[i] )
+
+            # Check for collapse. Currently only checking that topological charge decreases
             if abs(qArray[i]) < 0.1
                 break 
             end
 
         end
 
-        # For loop ended, so save data. By default, saves to parentDirectory() + "/data/"
-        reldir = string(dirname(pwd()),"/data/")
 
         # Save with a timestamp and random number generator if you are running the same computation
         # multiple times. (Not using right now because still testing and want to overwrite saved 
@@ -142,7 +141,7 @@ module spinDynamics
         #         params.defect.t,"_D-X=",params.defect.dx,"_D-Y=",params.defect.dy,"_D-STRENGTH=",
         #         params.defect.strength,"_D-WIDTH=",params,defect,width,"_",timestampString,"_.h5")
 
-        filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",a,"_DZ=",dz,"_ED=",round(ed,digits=5),"_.h5")
+
 
         if params.save.excE == 1.0
             writeDataH5(string(reldir,"exchange-energy_",filesuffix),excArray)
@@ -194,18 +193,26 @@ module spinDynamics
 
     function runRelaxation!( mat, params )
 
+
+        reldir = string(dirname(pwd()),"/data/")
+
         maxLoop = params.llg.tMax
         
         prevEnergy = 0.0
         currEnergy = 0.0
         diff = 10.0
         
-        @time for i in 1:maxLoop
+        currentOn = false
 
-            rk4!( mat, RHS!, params )
+        for i in 1:maxLoop
+
+            rk4!( mat, RHS!, params, currentOn )
             
             currEnergy = calcEnergy( mat, params.mp );
             diff = currEnergy - prevEnergy
+
+            # println("i = ", i, ", diff = ", diff)
+            # writeDataH5( string(reldir,"spin-field-i=",i,"_.h5"), mat )
 
             if abs(diff) < 0.00004
                 break
