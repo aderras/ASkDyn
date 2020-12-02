@@ -24,7 +24,7 @@ module userInputs
 
     using dipoleDipole
     export getUserParams, getTestParams, params, copyStruct!,
-    getParamList!
+    getParamList!,setFieldNestedStruct!
 
     # Material parameters
     mutable struct materialParams
@@ -315,14 +315,14 @@ module userInputs
     # areas when copying between structs has to be done. 
     function getTestParams()
 
-        myMatParams = materialParams([1.0, -0.03, 0.05, 0.0, 0.0, 64, 64, 1, true] )
-        myLlgParams = llgParams([1000, 0.2, 5.0, 10^-6, 0.1, 0.0, 1, 0, 0])
+        myMatParams = materialParams([1.0, -0.0085, 0.04, 4*pi*0.001, 0.001, 128, 128, 1, true] )
+        myLlgParams = llgParams([10000, 0.2, 5.0, 10^-6, 0.1, 0.0, 1, 0, 0])
         myFaParams = []
-        myICParams = icParams( ["skyrmion", 5, pi/2 , myMatParams.nx/2, myMatParams.ny/2] )
+        myICParams = icParams( ["skyrmion", 10, pi/2 , myMatParams.nx/2-10, myMatParams.ny/2-10] )
         myPinningParams = pinningParams( [0.0, 32, 32] )
-        myDefectParams = defectParams( [0.0, 0.0, 0.0, 0, 0] )
+        myDefectParams = defectParams( [2, -0.7, 2.0, myMatParams.nx/2, myMatParams.ny/2] )
         mySaveChoices = saveChoices( [1,0,0,0,0,0,0,1,1,1,0] )
-        myParamRanges = paramRanges( [ [], [], [], [], [], [], [], [], [], [], [], [] ] )
+        myParamRanges = paramRanges( [ [], [], [], [], [], [], [], [], [], [8.0,8.0,10.0], [1.0,2.0] ] )
         myCurrentChoices = currentParams( [ 0.2, -0.1, 100 ] )
 
         # Now put all of the user choices into one struct 
@@ -526,40 +526,73 @@ module userInputs
 
         if sum( lenRangeParams ) > 0    
 
-        # find the first nonzero range 
-        rangePos = findall(x->x != 0, lenRangeParams)[1]
+            # Find the first nonzero range 
+            rangePos = findall(x->x != 0, lenRangeParams)[1]
 
-        currentRange = getfield( rangeParams, fields[ rangePos ] )
+            currentRange = getfield( rangeParams, fields[rangePos] )
 
-        # Make a copy of the params struct. Call copyStruct to deep copy
-        copyParams = getTestParams()
-        copyStruct!( par, copyParams )
+            # Make a copy of the params struct. Call copyStruct! to deep copy
+            copyParams = getTestParams()
+            copyStruct!( par, copyParams )
 
-        # Set the range in the copied struct to empty
-        setfield!( copyParams.range, fields[rangePos], [] )
+            # For all the values in the range, set the field to that value and call 
+            # run comp again to recurse through the rest of the ranges. 
+            for i in range( 1, stop=length( currentRange ) )
+                
+                setFieldNestedStruct!( copyParams, fields[rangePos], currentRange[i] )
+                
+                # Set the field range we're currently on to empty in the copied struct
+                setfield!( copyParams.range, fields[rangePos], [] )
+                
+                # Then recurseRun again, until all of the ranges have 
+                # been cycled through.
+                getParamList!( copyParams, allParams )
 
-        # For all the values in the range, set the field and call run comp 
-        # again to recurse through the rest of the ranges. 
-        for i in range( 1, stop=length( currentRange ) )
-            
-            setfield!( copyParams.mp, fields[rangePos], currentRange[i] )
-        
-            # Then recurseRun again, until all of the ranges have 
-            # been cycled through.
-            getParamList!( copyParams, allParams )
-
-        end
+            end
 
         # If there are no ranges, then store the params 
         else
 
-            # Need to copy the struct first so that it won't pass by ref 
+            # Need to copy the struct first so that it won't pass by ref. To copy 
+            # first create a params object of the same structure as our input. (We 
+            # need it to be filled with values.) Then call copyStruct! to put all of 
+            # par into copyParams. Then add copyParams to the list of params. 
             copyParams = getTestParams()
             copyStruct!( par, copyParams )
 
             push!( allParams, copyParams )
 
         end
+    end
+
+    # Given a field and value, this searches the nested struct for the approapriate 
+    # location of the value. Works recursively. And slowly. You should speed this up.
+    function setFieldNestedStruct!( nestedStruct, fieldname, value )
+
+        names = fieldnames( typeof( nestedStruct ) )
+
+        # If there are no fields, you reached the end of the nested structure
+        if length( names ) == 0
+            
+            return
+
+        # If the field is in this list, then set the value to what you want  
+        elseif fieldname in names
+
+            setfield!( nestedStruct, fieldname, value )
+            return
+
+        # If the field is not in this level, it means there is another level to 
+        # recurse through. 
+        else
+
+            for f in names
+
+                setFieldNestedStruct!( getfield( nestedStruct, f ), fieldname, value )
+            end
+
+        end
+
     end
 
     # Deep copies struct of structs. Works recursively. Source and dest are

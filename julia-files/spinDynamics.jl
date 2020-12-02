@@ -75,6 +75,7 @@ module spinDynamics
         # configuration
         println( "Running relaxation on the spin lattice " )
         @time runRelaxation!( mat, params )
+        writeDataH5(string(reldir,"initial-spin-field_",filesuffix),mat)
 
 
         # Stopping criteria: energy converges to within some tolerance
@@ -142,41 +143,40 @@ module spinDynamics
         #         params.defect.strength,"_D-WIDTH=",params,defect,width,"_",timestampString,"_.h5")
 
 
-
+        filter(x->x!=0.,excArray)
         if params.save.excE == 1.0
-            writeDataH5(string(reldir,"exchange-energy_",filesuffix),excArray)
+            writeDataH5( string(reldir,"exchange-energy_",filesuffix),filter(x->x!=0.,excArray) )
         end
         if params.save.zeeE == 1.0
-            writeDataH5(string(reldir,"zeeman-energy_",filesuffix),zeeArray)
+            writeDataH5(string(reldir,"zeeman-energy_",filesuffix),filter(x->x!=0.,zeeArray))
         end
         if params.save.dmiE == 1.0
-            writeDataH5(string(reldir,"dmi-energy_",filesuffix),dmiArray)
+            writeDataH5(string(reldir,"dmi-energy_",filesuffix),filter(x->x!=0.,dmiArray))
         end
         if params.save.pmaE == 1.0
-            writeDataH5(string(reldir,"pma-energy_",filesuffix),pmaArray)
+            writeDataH5(string(reldir,"pma-energy_",filesuffix),filter(x->x!=0.,pmaArray))
         end
         if params.save.ddiE == 1.0
-            writeDataH5(string(reldir,"ddi-energy_",filesuffix),ddiArray)
+            writeDataH5(string(reldir,"ddi-energy_",filesuffix),filter(x->x!=0.,ddiArray))
         end
         if params.save.magn == 1.0
-            writeDataH5(string(reldir,"magnetization_",filesuffix),magnArray)
+            writeDataH5(string(reldir,"magnetization_",filesuffix),filter(x->x!=0.,magnArray))
         end
         if params.save.size == 1.0
-            writeDataH5(string(reldir,"effective-size_",filesuffix),sizeArray)
+            writeDataH5(string(reldir,"effective-size_",filesuffix),filter(x->x!=0.,sizeArray))
         end
         if params.save.location == 1.0
-            writeDataH5(string(reldir,"max-spin-location_",filesuffix),locArray)
+            writeDataH5(string(reldir,"max-spin-location_",filesuffix),filter(x->x!=0.,locArray))
         end
         if params.save.totE == 1.0
-            writeDataH5(string(reldir,"total-energy_",filesuffix),enArray)
-        end
-        if params.save.spinField == 1.0
-            writeDataH5(string(reldir,"final-spin-field_",filesuffix),mat)
+            writeDataH5(string(reldir,"total-energy_",filesuffix),filter(x->x!=0.,enArray))
         end
         if params.save.qCharge == 1.0
-            writeDataH5(string(reldir,"topological-charge_",filesuffix),qArray)
+            writeDataH5(string(reldir,"topological-charge_",filesuffix),filter(x->x!=0.,qArray))
         end
 
+        # Alwasys save the final spin field
+        writeDataH5(string(reldir,"final-spin-field_",filesuffix),mat)
 
     end
 
@@ -192,9 +192,6 @@ module spinDynamics
     end
 
     function runRelaxation!( mat, params )
-
-
-        reldir = string(dirname(pwd()),"/data/")
 
         maxLoop = params.llg.tMax
         
@@ -212,7 +209,6 @@ module spinDynamics
             diff = currEnergy - prevEnergy
 
             # println("i = ", i, ", diff = ", diff)
-            # writeDataH5( string(reldir,"spin-field-i=",i,"_.h5"), mat )
 
             if abs(diff) < 0.00004
                 break
