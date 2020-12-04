@@ -1,12 +1,12 @@
 # This module contains functions that call the numerical solver. Useful
-# function is runComputation(), which runs the runge kutta solver and 
-# saves the resulting data. 
+# function is runComputation(), which runs the runge kutta solver and
+# saves the resulting data.
 module spinDynamics
 
     using modifyFiles, energy, topologicalCharge, LLequation,
     magnetization, rungeKutta, LLequation, normalize, noiseRotation, Dates,
     effectiveSize, initialCondition, Distributed
-    
+
     export evaluateSpinDynamics, evaluateLL!, runRelaxation!, pulseNoiseStep!
 
     # Given a struct of parameters, compute the spin dynamics
@@ -19,11 +19,8 @@ module spinDynamics
 
     end
 
-    # The following function evaluates the LLG equation. In the comments you'll find
-    # two options: pulseNoise or rk4. For zero temperature relaxation, it doesn't matter
-    # which you use. For nonzero temperature, must use pulse noise. 
-    #
-    # inputs: mat = (N,N,3) initial condition, params 
+    # in: mat = (N,N,3) initial condition, params struct
+    # out: returns nothing. Modifies mat and exports data to disk
     function evaluateLL!( mat::Array{Float64,3}, params )
 
         maxLoop = params.llg.tMax
@@ -31,14 +28,16 @@ module spinDynamics
         ###########################################################################
         # Make arrays to store data based on what user requested
         # Can't think of a smarter way to do this....
-        j,h,a,dz,ed,nx,ny,nz,pbc,vdd = 
+        j,h,a,dz,ed,nx,ny,nz,pbc,vdd =
             [ getfield( params.mp, x ) for x in fieldnames( typeof(params.mp) ) ]
 
 
-        # Directory where results are saved. By default, saves to parentDirectory() + "/data/"
+        # Directory where results are saved. By default, saves to
+        # parentDirectory() + "/data/"
         reldir = string(dirname(pwd()),"/data/")
-        filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",a,"_DZ=",dz,"_ED=",
-            round(ed,digits=5),"_JX=",params.current.jx,"_JY=",params.current.jy,"_.h5")
+        filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",a,"_DZ=",
+            round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
+            params.current.jx,"_JY=",params.current.jy,"_.h5")
 
         if params.save.excE == 1.0
             excArray = zeros( maxLoop )
@@ -65,26 +64,26 @@ module spinDynamics
             locArray = zeros( maxLoop*2 )
         end
 
-        # Always to store energy and topological charge, so make arrays for those 
+        # Always store energy and topological charge, so make arrays for those
         enArray = zeros( maxLoop )
         qArray = zeros( maxLoop )
 
         ##########################################################################
         # Begin computation
-        # First, run relaxation on the spin lattice to find the stable skyrmion 
+        # First, run relaxation on the spin lattice to find the stable skyrmion
         # configuration
-        println( "Running relaxation on the spin lattice " )
+        println( "Running relaxation on the spin lattice. " )
         @time runRelaxation!( mat, params )
         writeDataH5(string(reldir,"initial-spin-field_",filesuffix),mat)
 
-
+        exit()
         # Stopping criteria: energy converges to within some tolerance
         # or topological charge becomes negative
         for i in 1:maxLoop
 
-            enArray[i]  = calcEnergy( mat, params.mp )
+            enArray[i]  = calcEnergy( mat, params )
 	        qArray[i]	= calcQ(mat)
-	  
+
             pulseNoiseStep!(mat, params)
 
             if params.save.excE == 1.0
@@ -113,26 +112,26 @@ module spinDynamics
                 locArray[(i*2-1)] = maxPos[1]
                 locArray[i*2] = maxPos[2]
             end
-            if params.save.spinField == 1.0 
+            if params.save.spinField == 1.0
                 writeDataH5(string(reldir,"spin-field-i=",i,"_",filesuffix),mat)
             end
 
-            enArray[i] = calcEnergy( mat, params.mp, params.defect )
-           
+            enArray[i] = calcEnergy( mat, params )
+
             qArray[i] = calcQ( mat )
 
             # println("i = ", i, ", Q = ", qArray[i], ", E = ", enArray[i] )
 
             # Check for collapse. Currently only checking that topological charge decreases
             if abs(qArray[i]) < 0.1
-                break 
+                break
             end
 
         end
 
 
         # Save with a timestamp and random number generator if you are running the same computation
-        # multiple times. (Not using right now because still testing and want to overwrite saved 
+        # multiple times. (Not using right now because still testing and want to overwrite saved
         # files instead of filling up the folder with distinct data.)
         timestampString = string(Dates.format(Dates.now(),"HH_MM_SS"),
                 trunc(Int,rand()*10000))
@@ -143,7 +142,6 @@ module spinDynamics
         #         params.defect.strength,"_D-WIDTH=",params,defect,width,"_",timestampString,"_.h5")
 
 
-        filter(x->x!=0.,excArray)
         if params.save.excE == 1.0
             writeDataH5( string(reldir,"exchange-energy_",filesuffix),filter(x->x!=0.,excArray) )
         end
@@ -194,21 +192,21 @@ module spinDynamics
     function runRelaxation!( mat, params )
 
         maxLoop = params.llg.tMax
-        
+
         prevEnergy = 0.0
         currEnergy = 0.0
         diff = 10.0
-        
+
         currentOn = false
 
         for i in 1:maxLoop
 
             rk4!( mat, RHS!, params, currentOn )
-            
-            currEnergy = calcEnergy( mat, params.mp );
+
+            # println("Time it takes to calculate energy")
+            currEnergy = calcEnergy( mat, params );
             diff = currEnergy - prevEnergy
 
-            # println("i = ", i, ", diff = ", diff)
 
             if abs(diff) < 0.00004
                 break
