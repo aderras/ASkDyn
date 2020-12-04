@@ -12,7 +12,7 @@
 module effectiveField
 
     import dipoleDipole
-    export effectivefield!, getFullEffField!, calculateDdiField
+    export effectivefield!, getFullEffField!, calcDdiField, gaussianDefectMat
 
     # effectivefield! modifies the (3, 1) array to equal the effective field
     # at some point nx,ny. Prealocating this way improves speed.
@@ -37,13 +37,13 @@ module effectiveField
         effField[2] = 0.
         effField[3] = h
 
-        # # # Compute exchange field
-        # if params.defect.t==0
-        #     exchangefield!( mat, effField, nx, ny, j, pbc==1.0 )
-        # elseif params.defect.t==2
-        #     # run exchange interaction with defect
-        #     exFieldGaussianDefect!( mat, effField, nx, ny, params  )
-        # end
+        # # Compute exchange field
+        if params.defect.t==0
+            exchangefield!( mat, effField, nx, ny, j, pbc==1.0 )
+        elseif params.defect.t==2
+            # run exchange interaction with defect
+            exFieldGaussianDefect!( mat, effField, nx, ny, params  )
+        end
 
         # Compute DMI and PMA if they're not set to zero
         if a != 0.0
@@ -304,12 +304,6 @@ module effectiveField
         #Exchange effective field
         calcExchangeField!( mat, params, Heff )
 
-        if params.defect.t == 2
-            Jmat = zeros(3,m,n)
-            Jmat = gaussianDefectExchange( params )
-            Heff = Heff .* Jmat
-        end
-
         calcZeemanField!( mat, params, Heff )
 
         # DMI effective field
@@ -365,7 +359,22 @@ module effectiveField
 
         p, m, n = size(mat)
 
-        J = params.mp.j
+        if params.defect.t == 2
+
+            aJ = params.defect.strength
+            dJ = params.defect.width
+            dx = params.defect.dx
+            dy = params.defect.dy
+
+        else
+            aJ = 0.0
+            dJ = 1.0
+            dx = 0.0
+            dy = 0.0
+        end
+
+        @inline J(i,j) = (1+aJ*exp( -( ( i-dx )^2 + ( j-dy )^2 )/dJ^2 ) )
+
         pbc = params.mp.pbc == 1.0
 
         for nx in 1:m, ny in 1:n
@@ -386,31 +395,33 @@ module effectiveField
                 end
 
                 for k in 1:3
-                    Heff[k,nx,ny] = Heff[k,nx,ny] + J *
-                        ( mat[k,nxPrev,ny] + mat[k,nxNext,ny] +
-                        mat[k,nx,nyPrev] + mat[k,nx,nyNext] )
+                    Heff[k,nx,ny] = Heff[k,nx,ny] +
+                        J(nx-1/2,ny) * mat[k,nxPrev,ny] +
+                        J(nx+1/2,ny) * mat[k,nxNext,ny] +
+                        J(nx,ny-1/2) * mat[k,nx,nyPrev] +
+                        J(nx,ny+1/2) * mat[k,nx,nyNext]
                 end
 
             else
 
                 if nx > 1
                     for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J * mat[k,nx-1,ny]
+                        Heff[k,nx,ny] = Heff[k,nx,ny] + J(nx,ny)*mat[k,nx-1,ny]
                     end
                 end
                 if ny > 1
                     for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J * mat[k,nx,ny-1]
+                        Heff[k,nx,ny] = Heff[k,nx,ny] + J(nx,ny)*mat[k,nx,ny-1]
                     end
                 end
                 if nx < m
                     for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J * mat[k,nx+1,ny]
+                        Heff[k,nx,ny] = Heff[k,nx,ny] + J(nx,ny)*mat[k,nx+1,ny]
                     end
                 end
                 if ny < n
                     for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J * mat[k,nx,ny+1]
+                        Heff[k,nx,ny] = Heff[k,nx,ny] + J(nx,ny)*mat[k,nx,ny+1]
                     end
                 end
             end
@@ -418,21 +429,26 @@ module effectiveField
 
     end
 
-    function gaussianDefectExchange( params )
+    function gaussianDefectMat( aJ, dJ, jx, jy )
 
+#=
         nx = params.mp.nx
         ny = params.mp.ny
 
         defType,aJ,dJ,jx,jy = [ getfield( params.defect, x )
             for x in fieldnames( typeof( params.defect ) ) ]
         J = params.mp.j
+=#
+        nx = round(Int64, jx*2)
+        ny = round(Int64, jy*2)
 
         exMat = zeros(3,nx,ny)
 
         for i in 1:nx, j in 1:ny
 
             for k in 1:3
-                exMat[k, i,j] = (1 - aJ*exp( -(( i - jx)^2 + (j -jy)^2)/dJ^2 ) )
+                exMat[k,i,j] = (1+aJ*exp( -( ( i-jx + 1/2 )^2 +
+                    ( j-jy - 1/2 )^2 )/dJ^2 ) )
             end
         end
 

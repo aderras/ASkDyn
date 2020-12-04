@@ -22,7 +22,7 @@
 =#
 module userInputs
 
-    using dipoleDipole
+    using dipoleDipole,effectiveField
     export getUserParams, buildParamStruct, params, copyStruct!,
     getParamList!,setFieldNestedStruct!
 
@@ -157,9 +157,16 @@ module userInputs
         width::Float64      # Width of impact
         dx::Int64           # x position (0 < dx < nx)
         dy::Int64           # y position (0 < dy < ny)
+        jMat
 
         function defectParams( arr )
-            return new( arr[1], arr[2], arr[3], arr[4], arr[5] )
+
+            if arr[1] == 2.0 || arr[1] == 2
+                mat = gaussianDefectMat( arr[2], arr[3], arr[4], arr[5] )
+                return new( arr[1], arr[2], arr[3], arr[4], arr[5], mat )
+            else
+                return new( arr[1], arr[2], arr[3], arr[4], arr[5], [] )
+            end
         end
 
     end
