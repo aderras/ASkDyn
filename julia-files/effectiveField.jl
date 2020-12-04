@@ -436,6 +436,7 @@ module effectiveField
             end
         end
 
+        return exMat
     end
 
     function calcDmiField!(mat, params, Heff)
