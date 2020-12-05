@@ -24,7 +24,7 @@ module userInputs
 
     using dipoleDipole,effectiveField
     export getUserParams, buildParamStruct, params, copyStruct!,
-    getParamList!,setFieldNestedStruct!
+        getParamList!,setFieldNestedStruct!
 
     # Material parameters
     mutable struct materialParams
