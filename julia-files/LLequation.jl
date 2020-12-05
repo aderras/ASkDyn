@@ -12,7 +12,7 @@ module LLequation
     #
     # outputs: nothing
     function RHS!( t::Float64, mat::Array{Float64,3}, matRHS::Array{Float64,3},
-        params, flag=true )
+        params, flag=false )
 
         p, m, n = size(mat)
 
@@ -20,7 +20,6 @@ module LLequation
 
         tMax, hStep, nn, tol, lambda, T, nRuns, par =
             [ getfield(llgParams, x) for x in fieldnames( typeof(llgParams) ) ]
-
 
         Heff = Array{Float64}(undef,p,m,n)
 
@@ -34,8 +33,8 @@ module LLequation
         fillRHS!( mat, Heff, SDotH, matRHS, lambda )
 
         # Only add current if nonzer and this is dynamics (not relaxation)
-        if (params.current.jx!=0 && flag==true ) ||
-            (params.current.jy!=0 && flag==true)
+        if (params.current.jx!=0 && flag==false ) ||
+            (params.current.jy!=0 && flag==false)
 
             addCurrent!( mat, matRHS, params.current )
 
@@ -56,9 +55,12 @@ module LLequation
         p, m, n = size(mat)
 
         for i in 1:m, j in 1:n
-            matRHS[1,i,j] = mat[2,i,j]*Heff[3,i,j] - mat[3,i,j]*Heff[2,i,j] + lambda*(Heff[1,i,j]-mat[1,i,j]*SDotH[1,i,j])
-            matRHS[2,i,j] = mat[3,i,j]*Heff[1,i,j] - mat[1,i,j]*Heff[3,i,j] + lambda*(Heff[2,i,j]-mat[2,i,j]*SDotH[1,i,j])
-            matRHS[3,i,j] = mat[1,i,j]*Heff[2,i,j] - mat[2,i,j]*Heff[1,i,j] + lambda*(Heff[3,i,j]-mat[3,i,j]*SDotH[1,i,j])
+            matRHS[1,i,j] = mat[2,i,j]*Heff[3,i,j] - mat[3,i,j]*Heff[2,i,j] +
+                lambda*(Heff[1,i,j]-mat[1,i,j]*SDotH[1,i,j])
+            matRHS[2,i,j] = mat[3,i,j]*Heff[1,i,j] - mat[1,i,j]*Heff[3,i,j] +
+                lambda*(Heff[2,i,j]-mat[2,i,j]*SDotH[1,i,j])
+            matRHS[3,i,j] = mat[1,i,j]*Heff[2,i,j] - mat[2,i,j]*Heff[1,i,j] +
+                lambda*(Heff[3,i,j]-mat[3,i,j]*SDotH[1,i,j])
         end
 
     end

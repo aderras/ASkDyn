@@ -9,7 +9,7 @@ module rungeKutta
     # the values mean.)
     # Rather than return an array of the past n solutions, this modifies
     # the X0 array to constantly contain most recent solution.
-    function rk4!( X0::Array{Float64,3}, f::Function, params, flag = true )
+    function rk4!( X0::Array{Float64,3}, f::Function, params, flag = false )
 
         p, m, n = size(X0)
 

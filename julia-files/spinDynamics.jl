@@ -13,6 +13,11 @@ module spinDynamics
     function evaluateSpinDynamics( p )
 
         s0 = buildInitial( p.ic, p.mp )
+
+        # First run relaxation
+        evaluateLL!( s0, p, true )
+
+        # Then dynamics
         evaluateLL!( s0, p )
 
         println("Completed eval on worker ", myid())
@@ -21,7 +26,7 @@ module spinDynamics
 
     # in: mat = (N,N,3) initial condition, params struct
     # out: returns nothing. Modifies mat and exports data to disk
-    function evaluateLL!( mat::Array{Float64,3}, params )
+    function evaluateLL!( mat::Array{Float64,3}, params, relaxation = false )
 
         maxLoop = params.llg.tMax
 
@@ -31,13 +36,19 @@ module spinDynamics
         j,h,a,dz,ed,nx,ny,nz,pbc,vdd =
             [ getfield( params.mp, x ) for x in fieldnames( typeof(params.mp) ) ]
 
-
         # Directory where results are saved. By default, saves to
         # parentDirectory() + "/data/"
         reldir = string(dirname(pwd()),"/data/")
-        filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",a,"_DZ=",
-            round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
-            params.current.jx,"_JY=",params.current.jy,"_.h5")
+
+        if relaxation
+            filesuffix = string("relaxation_T=",params.llg.temp,"_H=",h,"_A=",
+                a,"_DZ=",round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
+                params.current.jx,"_JY=",params.current.jy,"_.h5")
+        else
+            filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",a,"_DZ=",
+                round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
+                params.current.jx,"_JY=",params.current.jy,"_.h5")
+        end
 
         if params.save.excE == 1.0
             excArray = zeros( maxLoop )
@@ -72,11 +83,10 @@ module spinDynamics
         # Begin computation
         # First, run relaxation on the spin lattice to find the stable skyrmion
         # configuration
-        println( "Running relaxation on the spin lattice. " )
-        @time runRelaxation!( mat, params )
-        writeDataH5(string(reldir,"initial-spin-field_",filesuffix),mat)
+        # println( "Running relaxation on the spin lattice. " )
+        # @time runRelaxation!( mat, params )
+        # writeDataH5(string(reldir,"initial-spin-field_",filesuffix),mat)
 
-        exit()
         # Stopping criteria: energy converges to within some tolerance
         # or topological charge becomes negative
         for i in 1:maxLoop
@@ -84,7 +94,7 @@ module spinDynamics
             enArray[i]  = calcEnergy( mat, params )
 	        qArray[i]	= calcQ(mat)
 
-            pulseNoiseStep!(mat, params)
+            pulseNoiseStep!(mat, params, relaxation)
 
             if params.save.excE == 1.0
                 excArray = exchangeEnergy( mat, j, pbc==1.0, params.defect)
@@ -127,6 +137,10 @@ module spinDynamics
                 break
             end
 
+            if (relaxation && i > 40 &&
+                    abs(enArray[i]-enArray[i-1]) < params.llg.tol)
+                break
+            end
         end
 
 
@@ -179,41 +193,18 @@ module spinDynamics
     end
 
     # runs a single pulse noise step
-    function pulseNoiseStep!( s::Array{Float64,3}, params )
+    function pulseNoiseStep!( s::Array{Float64,3}, params, relaxation = false )
 
         # This is the pulse-noise algorithm
-        rk4!(s, RHS!, params)
-        rotateSpins!(s, params.llg)
-        rk4!(s, RHS!, params)
-        normalizeSpins!(s)
-
-    end
-
-    function runRelaxation!( mat, params )
-
-        maxLoop = params.llg.tMax
-
-        prevEnergy = 0.0
-        currEnergy = 0.0
-        diff = 10.0
-
-        currentOn = false
-
-        for i in 1:maxLoop
-
-            rk4!( mat, RHS!, params, currentOn )
-
-            # println("Time it takes to calculate energy")
-            currEnergy = calcEnergy( mat, params );
-            diff = currEnergy - prevEnergy
-
-
-            if abs(diff) < 0.00004
-                break
-            else
-                prevEnergy = currEnergy
-            end
-
+        if params.llg.temp == 0.0
+            rk4!(s, RHS!, params, relaxation)
+            rk4!(s, RHS!, params, relaxation)
+            normalizeSpins!(s)
+        else
+            rk4!(s, RHS!, params, relaxation)
+            rotateSpins!(s, params.llg)
+            rk4!(s, RHS!, params, relaxation)
+            normalizeSpins!(s)
         end
 
     end
