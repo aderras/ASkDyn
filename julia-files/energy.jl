@@ -7,7 +7,7 @@ module energy
 
     import dipoleDipole
     export calcEnergy, exchangeEnergy, zeemanEnergy, dmiEnergy,
-    pmaEnergy, ddiEnergy
+        pmaEnergy, ddiEnergy
 
 
     # Calculates the total energy of matrix mat for material parameters
@@ -21,7 +21,7 @@ module energy
     # outputs: Float
     #
     function calcEnergy( mat::Array{Float64,3}, params )
-        
+
         j,h,a,dz,ed,nx,ny,nz,pbc,vdd = [ getfield( params.mp, x )
             for x in fieldnames( typeof(params.mp) ) ]
 
@@ -185,13 +185,11 @@ module energy
         elseif defType == 2.0
 
             for j in 1:n, i in 1:m-1, k in 1:p
-                en += -J * (1 + aJ * exp( -((i-jx + 1/2)^2 + (j-jy)^2)/dJ^2) ) *
-                    mat[k,i,j] * mat[k,i+1,j]
+                en += -J * dParams.jMat[4][i,j] * mat[k,i,j] * mat[k,i+1,j]
             end
 
             for j in 1:n-1, i in 1:m, k in 1:p
-                en += -J * (1 + aJ * exp( -((i-jx)^2 + (j-jy - 1/2)^2)/dJ^2) ) *
-                    mat[k,i,j] * mat[k,i,j+1]
+                en += -J * dParams.jMat[2][i,j] * mat[k,i,j] * mat[k,i,j+1]
             end
 
 
