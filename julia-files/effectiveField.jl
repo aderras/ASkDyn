@@ -302,7 +302,11 @@ module effectiveField
         effField = zeros(3)
 
         #Exchange effective field
-        calcExchangeField!( mat, params, Heff )
+        if params.defect.t == 2
+            calcExchangeFieldWithDefect!( mat, params, Heff )
+        else
+            calcExchangeField!( mat, params, Heff )
+        end
 
         calcZeemanField!( mat, params, Heff )
 
@@ -359,22 +363,65 @@ module effectiveField
 
         p, m, n = size(mat)
 
-        if params.defect.t == 2
+        J = params.mp.j # (1+aJ*exp( -( ( i-dx )^2 + ( j-dy )^2 )/dJ^2 ) )
 
-            aJ = params.defect.strength
-            dJ = params.defect.width
-            dx = params.defect.dx
-            dy = params.defect.dy
+        pbc = params.mp.pbc == 1.0
+        for nx in 1:m, ny in 1:n
 
-        else
-            aJ = 0.0
-            dJ = 1.0
-            dx = 0.0
-            dy = 0.0
+            if pbc
+                nxNext = nx%m + 1
+                nyNext = ny%n + 1
+
+                if nx == 1
+                    nxPrev = m
+                else
+                    nxPrev = nx-1
+                end
+                if ny == 1
+                    nyPrev = n
+                else
+                    nyPrev = ny-1
+                end
+
+                for k in 1:3
+                    Heff[k,nx,ny] = Heff[k,nx,ny] +
+                        J * mat[k,nxPrev,ny] +
+                        J * mat[k,nxNext,ny] +
+                        J * mat[k,nx,nyPrev] +
+                        J * mat[k,nx,nyNext]
+                end
+
+            else
+
+                if nx > 1
+                    for k in 1:3
+                        Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx-1,ny]
+                    end
+                end
+                if ny > 1
+                    for k in 1:3
+                        Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx,ny-1]
+                    end
+                end
+                if nx < m
+                    for k in 1:3
+                        Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx+1,ny]
+                    end
+                end
+                if ny < n
+                    for k in 1:3
+                        Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx,ny+1]
+                    end
+                end
+            end
         end
 
-        @inline J(i,j) = (1+aJ*exp( -( ( i-dx )^2 + ( j-dy )^2 )/dJ^2 ) )
 
+    end
+
+    function calcExchangeFieldWithDefect!( mat, params, Heff)
+
+        p, m, n = size(mat)
         pbc = params.mp.pbc == 1.0
 
         for nx in 1:m, ny in 1:n
@@ -395,64 +442,64 @@ module effectiveField
                 end
 
                 for k in 1:3
+                    
                     Heff[k,nx,ny] = Heff[k,nx,ny] +
-                        J(nx-1/2,ny) * mat[k,nxPrev,ny] +
-                        J(nx+1/2,ny) * mat[k,nxNext,ny] +
-                        J(nx,ny-1/2) * mat[k,nx,nyPrev] +
-                        J(nx,ny+1/2) * mat[k,nx,nyNext]
+                        params.defect.jMat[1][nx,ny] * mat[k,nxPrev,ny] +
+                        params.defect.jMat[2][nx,ny] * mat[k,nxNext,ny] +
+                        params.defect.jMat[3][nx,ny] * mat[k,nx,nyPrev] +
+                        params.defect.jMat[4][nx,ny] * mat[k,nx,nyNext]
                 end
 
             else
 
                 if nx > 1
                     for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J(nx,ny)*mat[k,nx-1,ny]
+                        Heff[k,nx,ny] = Heff[k,nx,ny] +
+                            params.defect.jMat[1][nx,ny]*mat[k,nx-1,ny]
                     end
                 end
                 if ny > 1
                     for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J(nx,ny)*mat[k,nx,ny-1]
+                        Heff[k,nx,ny] = Heff[k,nx,ny] +
+                            params.defect.jMat[3][nx,ny]*mat[k,nx,ny-1]
                     end
                 end
                 if nx < m
                     for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J(nx,ny)*mat[k,nx+1,ny]
+                        Heff[k,nx,ny] = Heff[k,nx,ny] +
+                            params.defect.jMat[2][nx,ny]*mat[k,nx+1,ny]
                     end
                 end
                 if ny < n
                     for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J(nx,ny)*mat[k,nx,ny+1]
+                        Heff[k,nx,ny] = Heff[k,nx,ny] +
+                            params.defect.jMat[4][nx,ny]*mat[k,nx,ny+1]
                     end
                 end
             end
         end
-
     end
 
     function gaussianDefectMat( aJ, dJ, jx, jy )
 
-#=
-        nx = params.mp.nx
-        ny = params.mp.ny
-
-        defType,aJ,dJ,jx,jy = [ getfield( params.defect, x )
-            for x in fieldnames( typeof( params.defect ) ) ]
-        J = params.mp.j
-=#
         nx = round(Int64, jx*2)
         ny = round(Int64, jy*2)
 
-        exMat = zeros(3,nx,ny)
+        left = zeros(nx,ny)
+        right = zeros(nx,ny)
+        top = zeros(nx,ny)
+        bott = zeros(nx,ny)
 
         for i in 1:nx, j in 1:ny
 
-            for k in 1:3
-                exMat[k,i,j] = (1+aJ*exp( -( ( i-jx + 1/2 )^2 +
-                    ( j-jy - 1/2 )^2 )/dJ^2 ) )
-            end
+            left[i,j] = ( 1+aJ*exp( -( (i-jx-1/2)^2 + (j-jy)^2 )/dJ^2 ) )
+            right[i,j] = ( 1+aJ*exp( -( (i-jx+1/2)^2 + (j-jy)^2 )/dJ^2 ) )
+            top[i,j] = ( 1+aJ*exp( -( (i-jx)^2 + (j-jy-1/2)^2 )/dJ^2 ) )
+            bott[i,j] = ( 1+aJ*exp( -( (i-jx)^2 + (j-jy+1/2)^2 )/dJ^2 ) )
+
         end
 
-        return exMat
+        return [ left, right, top, bott ]
     end
 
     function calcDmiField!(mat, params, Heff)
