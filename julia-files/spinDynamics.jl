@@ -40,14 +40,12 @@ module spinDynamics
         # parentDirectory() + "/data/"
         reldir = string(dirname(pwd()),"/data/")
 
+        filesuffix = string("relaxation_T=",params.llg.temp,"_H=",h,"_A=",
+            a,"_DZ=",round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
+            params.current.jx,"_JY=",params.current.jy,"_.h5")
+
         if relaxation
-            filesuffix = string("relaxation_T=",params.llg.temp,"_H=",h,"_A=",
-                a,"_DZ=",round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
-                params.current.jx,"_JY=",params.current.jy,"_.h5")
-        else
-            filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",a,"_DZ=",
-                round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
-                params.current.jx,"_JY=",params.current.jy,"_.h5")
+            filesuffix = string("relaxation_",filesuffix)
         end
 
         if params.save.excE == 1.0
@@ -91,9 +89,6 @@ module spinDynamics
         # or topological charge becomes negative
         for i in 1:maxLoop
 
-            enArray[i]  = calcEnergy( mat, params )
-	        qArray[i]	= calcQ(mat)
-
             pulseNoiseStep!(mat, params, relaxation)
 
             if params.save.excE == 1.0
@@ -127,7 +122,6 @@ module spinDynamics
             end
 
             enArray[i] = calcEnergy( mat, params )
-
             qArray[i] = calcQ( mat )
 
             # println("i = ", i, ", Q = ", qArray[i], ", E = ", enArray[i] )
