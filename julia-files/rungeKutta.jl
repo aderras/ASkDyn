@@ -18,11 +18,6 @@ module rungeKutta
         tMax, hStep, nn, tol, lambda, T, nRuns, par =
             [ getfield( llgParams, x ) for x in fieldnames(typeof(llgParams)) ]
 
-        # If running relaxation, use high damping
-        if flag
-            lambda = 1.0
-        end
-
         # Initialize vars
         t0 = 0.0
 
