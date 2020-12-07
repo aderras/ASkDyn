@@ -75,10 +75,11 @@ module userInputs
         pbc
         jx  # current in x
         jy  # current in y
+        px # initial position of skyrmion
 
         function paramRanges( arr )
             return new( arr[1], arr[2], arr[3], arr[4], arr[5], arr[6],
-                arr[7], arr[8], arr[9], arr[10], arr[11] )
+                arr[7], arr[8], arr[9], arr[10], arr[11], arr[12] )
         end
 
 
@@ -132,7 +133,7 @@ module userInputs
         py::Int64           # Position in y direction (0 < py < ny)
 
         function icParams( arr )
-            return new( arr[1], arr[2], arr[3], arr[4], arr[5] )
+            return new( arr[1], arr[2], arr[3], Int(arr[4]), Int(arr[5]) )
         end
     end
 
@@ -140,11 +141,9 @@ module userInputs
     mutable struct pinningParams
 
         hPin::Float64       # Pinning field strength
-        px::Int64           # Position of pinning field in x (0 < px < nx)
-        py::Int64           # Position of pinning field in y (0 < py < ny)
 
         function pinningParams( arr )
-            return new( arr[1], arr[2], arr[3] )
+            return new( arr[1] )
         end
 
     end
@@ -309,6 +308,8 @@ module userInputs
             mat.jx = val
         elseif num == 11
             mat.jy = val
+        elseif num == 12
+            mat.px = val
         else
             println(string("Error modifying material parameter struct. No ", num, "th value found. Quitting."))
             quit()
@@ -326,10 +327,10 @@ module userInputs
         llgList = [ 0, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0 ],
         faList = [0, 0.0, 0.0, 0.0, 0.0, 0, 0.0],
         icList = ["", 0, 0.0, 0, 0],
-        pinList = [ 0.0,0,0 ],
+        pinList = [ 0.0],
         defList = [0, 0.0, 0.0, 0,0],
         saveList = [0,0,0,0,0,0,0,0,0,0,0],
-        rangeList = [ [], [], [], [], [], [], [], [], [], [], [] ],
+        rangeList = [ [], [], [], [], [], [], [], [], [], [], [], [] ],
         currList = [ 0.0, 0.0, 100 ] )
 
 
@@ -380,7 +381,8 @@ module userInputs
                 8 = Nz
                 9 = pbc
                 10 = Current in x direction
-                11 - Current in y direction
+                11 = Current in y direction
+                12 = Initial skyrmion location in x
 
                 Enter your choice(s) separated by commas: ")  )
 
@@ -402,7 +404,7 @@ module userInputs
             # Keep going
         else
             println( "I did not understand your request. Let's try again." )
-            return getUserInput()
+            return getUserParams()
         end
 
 
@@ -448,9 +450,9 @@ module userInputs
         # Get params. Default set pin field at center of the lattice
         if ans == "y"
             myPinningParams = getComputationParams( pinningParams, ["H_pin", "X", "Y"],
-                [0.01, myMatParams.nx/2 , myMatParams.ny/2] )
+                [0.01] )
         else
-            myPinningParams = pinningParams( [0.0, 32, 32] )
+            myPinningParams = pinningParams( [0.0] )
         end
 
         # Is there a defect in the lattice

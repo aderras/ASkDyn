@@ -323,13 +323,15 @@ module effectiveField
             dipField    = Array{Float64}(undef, 3, m, n)
             dipField    = calcDdiField(mat, ed, pbc==1.0, vdd)
 
-            return Heff + dipField
+            Heff = Heff + dipField
         end
 
         # If there is a pinning field, add the field at the point
         # To pin the skyrmion to the center add field to the pinning point
-        hPin, px, py = [ getfield( params.pin, x )
-            for x in fieldnames( typeof( params.pin ) ) ]
+        hPin = params.pin.hPin
+        px = params.ic.px
+        py = params.ic.py
+
         if hPin != 0.0
             Heff[3,px,py] = Heff[3,px,py] + hPin
         end
@@ -363,7 +365,7 @@ module effectiveField
 
         p, m, n = size(mat)
 
-        J = params.mp.j # (1+aJ*exp( -( ( i-dx )^2 + ( j-dy )^2 )/dJ^2 ) )
+        J = params.mp.j
 
         pbc = params.mp.pbc == 1.0
         for nx in 1:m, ny in 1:n
@@ -424,6 +426,56 @@ module effectiveField
         p, m, n = size(mat)
         pbc = params.mp.pbc == 1.0
 
+# Shower way to find exchange energy:
+#=
+        # Exchange field from the right,
+        for nx in 1:m-1, ny in 1:n, k in 1:3
+            Heff[k,nx,ny] = Heff[k,nx,ny] +
+                params.defect.jMat[2][nx,ny] * mat[k,nx+1,ny]
+        end
+
+        # Left neighbor
+        for nx in 2:m, ny in 1:n, k in 1:3
+            Heff[k,nx,ny] = Heff[k,nx,ny] +
+                params.defect.jMat[1][nx,ny] * mat[k,nx-1,ny]
+        end
+
+        # Bottom neighbor
+        for nx in 1:m, ny in 1:n-1, k in 1:3
+            Heff[k,nx,ny] = Heff[k,nx,ny] +
+                params.defect.jMat[4][nx,ny] * mat[k,nx,ny+1]
+        end
+
+        # Top neighbor
+        for nx in 1:m, ny in 2:n, k in 1:3
+            Heff[k,nx,ny] = Heff[k,nx,ny] +
+                params.defect.jMat[3][nx,ny] * mat[k,nx,ny-1]
+        end
+
+        if pbc
+
+            for ny in 1:n, k in 1:3
+                Heff[k,m,ny] = Heff[k,m,ny] +
+                    params.defect.jMat[2][m,ny] * mat[k,1,ny]
+            end
+
+            for ny in 1:n, k in 1:3
+                Heff[k,1,ny] = Heff[k,1,ny] +
+                    params.defect.jMat[1][1,ny] * mat[k,m,ny]
+            end
+
+            for nx in 1:m, k in 1:3
+                Heff[k,nx,n] = Heff[k,nx,n] +
+                    params.defect.jMat[4][nx,n] * mat[k,nx,1]
+            end
+
+            for nx in 1:m, k in 1:3
+                Heff[k,nx,1] = Heff[k,nx,1] +
+                    params.defect.jMat[4][nx,1] * mat[k,nx,n]
+            end
+        end
+=#
+
         for nx in 1:m, ny in 1:n
 
             if pbc
@@ -442,7 +494,7 @@ module effectiveField
                 end
 
                 for k in 1:3
-                    
+
                     Heff[k,nx,ny] = Heff[k,nx,ny] +
                         params.defect.jMat[1][nx,ny] * mat[k,nxPrev,ny] +
                         params.defect.jMat[2][nx,ny] * mat[k,nxNext,ny] +
@@ -478,6 +530,8 @@ module effectiveField
                 end
             end
         end
+
+
     end
 
     function gaussianDefectMat( aJ, dJ, jx, jy )
