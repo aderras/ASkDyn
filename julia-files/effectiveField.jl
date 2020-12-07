@@ -299,7 +299,6 @@ module effectiveField
             [ getfield( matParams, x ) for x in fieldnames( typeof(matParams) ) ]
 
         Heff = zeros(3, m, n)
-        effField = zeros(3)
 
         #Exchange effective field
         if params.defect.t == 2
@@ -368,51 +367,45 @@ module effectiveField
         J = params.mp.j
 
         pbc = params.mp.pbc == 1.0
-        for nx in 1:m, ny in 1:n
+        for k in 1:3
+            for ny in 1:n
+                for nx in 1:m
 
-            if pbc
-                nxNext = nx%m + 1
-                nyNext = ny%n + 1
+                    if pbc
+                        nxNext = nx%m + 1
+                        nyNext = ny%n + 1
 
-                if nx == 1
-                    nxPrev = m
-                else
-                    nxPrev = nx-1
-                end
-                if ny == 1
-                    nyPrev = n
-                else
-                    nyPrev = ny-1
-                end
+                        if nx == 1
+                            nxPrev = m
+                        else
+                            nxPrev = nx-1
+                        end
+                        if ny == 1
+                            nyPrev = n
+                        else
+                            nyPrev = ny-1
+                        end
 
-                for k in 1:3
-                    Heff[k,nx,ny] = Heff[k,nx,ny] +
-                        J * mat[k,nxPrev,ny] +
-                        J * mat[k,nxNext,ny] +
-                        J * mat[k,nx,nyPrev] +
-                        J * mat[k,nx,nyNext]
-                end
+                        Heff[k,nx,ny] = Heff[k,nx,ny] +
+                            J * mat[k,nxPrev,ny] +
+                            J * mat[k,nxNext,ny] +
+                            J * mat[k,nx,nyPrev] +
+                            J * mat[k,nx,nyNext]
 
-            else
+                    else
 
-                if nx > 1
-                    for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx-1,ny]
-                    end
-                end
-                if ny > 1
-                    for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx,ny-1]
-                    end
-                end
-                if nx < m
-                    for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx+1,ny]
-                    end
-                end
-                if ny < n
-                    for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx,ny+1]
+                        if nx > 1
+                            Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx-1,ny]
+                        end
+                        if ny > 1
+                            Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx,ny-1]
+                        end
+                        if nx < m
+                            Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx+1,ny]
+                        end
+                        if ny < n
+                            Heff[k,nx,ny] = Heff[k,nx,ny] + J*mat[k,nx,ny+1]
+                        end
                     end
                 end
             end
@@ -426,106 +419,127 @@ module effectiveField
         p, m, n = size(mat)
         pbc = params.mp.pbc == 1.0
 
-# Shower way to find exchange energy:
-#=
+        # Shower way to find exchange energy:
+        #=
         # Exchange field from the right,
-        for nx in 1:m-1, ny in 1:n, k in 1:3
-            Heff[k,nx,ny] = Heff[k,nx,ny] +
-                params.defect.jMat[2][nx,ny] * mat[k,nx+1,ny]
+        for k in 1:3
+            for ny in 1:n
+                for nx in 1:m-1
+                    Heff[k,nx,ny] = Heff[k,nx,ny] +
+                        params.defect.jMat[2][nx,ny] * mat[k,nx+1,ny]
+                end
+            end
         end
 
         # Left neighbor
-        for nx in 2:m, ny in 1:n, k in 1:3
-            Heff[k,nx,ny] = Heff[k,nx,ny] +
-                params.defect.jMat[1][nx,ny] * mat[k,nx-1,ny]
+        for k in 1:3
+            for ny in 1:n
+                for nx in 2:m
+                    Heff[k,nx,ny] = Heff[k,nx,ny] +
+                        params.defect.jMat[1][nx,ny] * mat[k,nx-1,ny]
+                end
+            end
         end
 
         # Bottom neighbor
-        for nx in 1:m, ny in 1:n-1, k in 1:3
-            Heff[k,nx,ny] = Heff[k,nx,ny] +
-                params.defect.jMat[4][nx,ny] * mat[k,nx,ny+1]
+        for k in 1:3
+            for ny in 1:n-1
+                for nx in 1:m
+                    Heff[k,nx,ny] = Heff[k,nx,ny] +
+                        params.defect.jMat[4][nx,ny] * mat[k,nx,ny+1]
+                end
+            end
         end
 
         # Top neighbor
-        for nx in 1:m, ny in 2:n, k in 1:3
-            Heff[k,nx,ny] = Heff[k,nx,ny] +
-                params.defect.jMat[3][nx,ny] * mat[k,nx,ny-1]
+        for k in 1:3
+            for ny in 2:n
+                for nx in 1:m
+                    Heff[k,nx,ny] = Heff[k,nx,ny] +
+                        params.defect.jMat[3][nx,ny] * mat[k,nx,ny-1]
+                end
+            end
         end
 
         if pbc
 
-            for ny in 1:n, k in 1:3
-                Heff[k,m,ny] = Heff[k,m,ny] +
-                    params.defect.jMat[2][m,ny] * mat[k,1,ny]
+            for k in 1:3
+                for ny in 1:n
+                    Heff[k,m,ny] = Heff[k,m,ny] +
+                        params.defect.jMat[2][m,ny] * mat[k,1,ny]
+                end
             end
 
-            for ny in 1:n, k in 1:3
-                Heff[k,1,ny] = Heff[k,1,ny] +
-                    params.defect.jMat[1][1,ny] * mat[k,m,ny]
+            for k in 1:3
+                for ny in 1:n
+                    Heff[k,1,ny] = Heff[k,1,ny] +
+                        params.defect.jMat[1][1,ny] * mat[k,m,ny]
+                end
             end
 
-            for nx in 1:m, k in 1:3
-                Heff[k,nx,n] = Heff[k,nx,n] +
-                    params.defect.jMat[4][nx,n] * mat[k,nx,1]
+            for k in 1:3
+                for nx in 1:m
+                    Heff[k,nx,n] = Heff[k,nx,n] +
+                        params.defect.jMat[4][nx,n] * mat[k,nx,1]
+                end
             end
 
-            for nx in 1:m, k in 1:3
-                Heff[k,nx,1] = Heff[k,nx,1] +
-                    params.defect.jMat[4][nx,1] * mat[k,nx,n]
+            for k in 1:3
+                for nx in 1:m
+                    Heff[k,nx,1] = Heff[k,nx,1] +
+                        params.defect.jMat[4][nx,1] * mat[k,nx,n]
+                end
             end
         end
-=#
+        =#
 
-        for nx in 1:m, ny in 1:n
 
-            if pbc
-                nxNext = nx%m + 1
-                nyNext = ny%n + 1
+        # There's a tiny improvement in benchmark speed by writing the for
+        # loop this way. Not sure if it's real improvement, but I'll take what
+        # I can get. 
+        for k in 1:3
+            for ny in 1:m
+                for nx in 1:n
 
-                if nx == 1
-                    nxPrev = m
-                else
-                    nxPrev = nx-1
-                end
-                if ny == 1
-                    nyPrev = n
-                else
-                    nyPrev = ny-1
-                end
+                    if pbc
+                        nxNext = nx%m + 1
+                        nyNext = ny%n + 1
 
-                for k in 1:3
+                        if nx == 1
+                            nxPrev = m
+                        else
+                            nxPrev = nx-1
+                        end
+                        if ny == 1
+                            nyPrev = n
+                        else
+                            nyPrev = ny-1
+                        end
 
-                    Heff[k,nx,ny] = Heff[k,nx,ny] +
-                        params.defect.jMat[1][nx,ny] * mat[k,nxPrev,ny] +
-                        params.defect.jMat[2][nx,ny] * mat[k,nxNext,ny] +
-                        params.defect.jMat[3][nx,ny] * mat[k,nx,nyPrev] +
-                        params.defect.jMat[4][nx,ny] * mat[k,nx,nyNext]
-                end
-
-            else
-
-                if nx > 1
-                    for k in 1:3
                         Heff[k,nx,ny] = Heff[k,nx,ny] +
-                            params.defect.jMat[1][nx,ny]*mat[k,nx-1,ny]
-                    end
-                end
-                if ny > 1
-                    for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] +
-                            params.defect.jMat[3][nx,ny]*mat[k,nx,ny-1]
-                    end
-                end
-                if nx < m
-                    for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] +
-                            params.defect.jMat[2][nx,ny]*mat[k,nx+1,ny]
-                    end
-                end
-                if ny < n
-                    for k in 1:3
-                        Heff[k,nx,ny] = Heff[k,nx,ny] +
-                            params.defect.jMat[4][nx,ny]*mat[k,nx,ny+1]
+                            params.defect.jMat[1][nx,ny] * mat[k,nxPrev,ny] +
+                            params.defect.jMat[2][nx,ny] * mat[k,nxNext,ny] +
+                            params.defect.jMat[3][nx,ny] * mat[k,nx,nyPrev] +
+                            params.defect.jMat[4][nx,ny] * mat[k,nx,nyNext]
+
+                    else
+
+                        if nx > 1
+                            Heff[k,nx,ny] = Heff[k,nx,ny] +
+                                params.defect.jMat[1][nx,ny]*mat[k,nx-1,ny]
+                        end
+                        if ny > 1
+                            Heff[k,nx,ny] = Heff[k,nx,ny] +
+                                params.defect.jMat[3][nx,ny]*mat[k,nx,ny-1]
+                        end
+                        if nx < m
+                            Heff[k,nx,ny] = Heff[k,nx,ny] +
+                                params.defect.jMat[2][nx,ny]*mat[k,nx+1,ny]
+                        end
+                        if ny < n
+                            Heff[k,nx,ny] = Heff[k,nx,ny] +
+                                params.defect.jMat[4][nx,ny]*mat[k,nx,ny+1]
+                        end
                     end
                 end
             end

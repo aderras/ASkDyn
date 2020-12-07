@@ -12,10 +12,38 @@ module spinDynamics
     # Given a struct of parameters, compute the spin dynamics
     function evaluateSpinDynamics( p )
 
-        s0 = buildInitial( p.ic, p.mp )
+        # First run relaxation if the user requested. If they didn't, check
+        # the folder "relaxation-data/" for data there. If there's no data,
+        # print a warning and continue
+        if p.llg.relax == 1
+            s0 = buildInitial( p.ic, p.mp )
+            evaluateLL!( s0, p, true )
 
-        # First run relaxation
-        evaluateLL!( s0, p, true )
+        else
+
+            # Check for relaxation data
+            relaxDir = string(dirname(pwd()),"/relaxation-data/")
+
+            j,h,a,dz,ed = [ getfield( p.mp, x )
+                for x in fieldnames( typeof(p.mp) )[1:5] ]
+
+            filesuffix = string("relaxation_T=",p.llg.temp,"_H=",h,"_A=",
+                a,"_DZ=",round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
+                p.current.jx,"_JY=",p.current.jy,"_PX=",p.ic.px,"_.h5")
+
+            filename = string(relaxDir,"final-spin-field_",filesuffix)
+
+            if isfile( filename )
+
+                println("Importing relaxation file ", filename)
+                s0 = getDataH5( filename )
+            else
+                println("No relaxation data with name ", filename, " found. ",
+                    "Continuing evaluation without relaxation.")
+                s0 = buildInitial( p.ic, p.mp )
+            end
+
+        end
 
         # Then dynamics
         evaluateLL!( s0, p )
@@ -40,9 +68,10 @@ module spinDynamics
         # parentDirectory() + "/data/"
         reldir = string(dirname(pwd()),"/data/")
 
-        filesuffix = string("relaxation_T=",params.llg.temp,"_H=",h,"_A=",
+        filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",
             a,"_DZ=",round(dz,digits=5),"_ED=",round(ed,digits=5),"_JX=",
-            params.current.jx,"_JY=",params.current.jy,"_.h5")
+            params.current.jx,"_JY=",params.current.jy,"_PX=",
+            params.ic.px,"_.h5")
 
         if relaxation
             filesuffix = string("relaxation_",filesuffix)

@@ -80,13 +80,13 @@ module LLequation
         for i in 1:m, j in 1:n
 
             # Periodic BC always used
-            iNext = (i % m) + 1
+            iNext =  i%m + 1
             if i==1
                 iPrev = m
             else
                 iPrev = i-1
             end
-            jNext = (j+1) % n
+            jNext = j%n + 1
 
             if j==1
                 jPrev = n
@@ -97,7 +97,7 @@ module LLequation
             # It would probably be faster to compute this matrix first, rather
             # than in every iteration
             DeltaX = (1/2) * ( s[:,iNext,j] - s[:,iPrev,j] )
-            DeltaY = (1/2) * ( s[:,i,jPrev] - s[:,i,jPrev] )
+            DeltaY = (1/2) * ( s[:,i,jNext] - s[:,i,jPrev] )
 
             # Cross product of DeltaX and s_{i,j}
             DeltaXCrossS = [ DeltaX[2]*s[3,i,j] - DeltaX[3]*s[2,i,j],

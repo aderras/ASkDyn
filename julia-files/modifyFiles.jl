@@ -3,18 +3,18 @@
 module modifyFiles
 
     using HDF5
-    export getH5data,writeDataH5
+    export getDataH5,writeDataH5
 
     # Imports spin data
     #
     # inputs: filename = string of file path relative to code directory
     #
     # outputs: mat = (N,N,3) array
-    # 
-    function getH5data( filename::String )
-        
+    #
+    function getDataH5( filename::String )
+
         # import initial data. The following are HDF5 objects
-        rawfile = h5open(pwd()*filename,"r")
+        rawfile = h5open(filename,"r")
         latticeData = rawfile["Dataset1"]
 
         # extract matrix size
@@ -33,7 +33,7 @@ module modifyFiles
     # Export data in H5 format
     #
     # inputs: filename = string of relative file path. data = object you
-    # want to save. 
+    # want to save.
     #
     # outputs: nothing
     #

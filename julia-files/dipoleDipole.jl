@@ -55,13 +55,13 @@ module dipoleDipole
     @inline denominator(a::Float64,b::Float64,c::Float64) =  sqrt((a^2 + b^2 + c^2)^2*(a^2 + b^2 + c^2)^2*(a^2 + b^2 + c^2))
 
     @inline Fxx(nx,ny,Tx,Ty) = nx*ny/(4*pi*Tx*Ty*(nx^2)*sqrt(nx^2 + ny^2 ))
-    @inline Fzz(nx,ny,Tx,Ty) = -nx*ny*(4*pi*nx^2+ny^2)/(Tx*Ty*(nx^2)*(ny^2)*sqrt(nx^2 + ny^2))
+    @inline Fzz(nx,ny,Tx,Ty) = -nx*ny*(nx^2+ny^2)/(4*pi*Tx*Ty*(nx^2)*(ny^2)*sqrt(nx^2 + ny^2))
     @inline Fxy(nx,ny,Tx,Ty) = -1.0/(4*pi*Tx*Ty*sqrt(nx^2 + ny^2 ))
 
     function Phipbc(nx::Int,ny::Int,stype::String, Nx, Ny, Nz)
 
-        paramPbcX = round(Int,50) #float(Nx)
-        paramPbcY = round(Int,50) #float(Ny)
+        paramPbcX = round(Int,2000/float(Nx))
+        paramPbcY = round(Int,2000/float(Ny))
 
         Xc = paramPbcX + 0.5
         Yc = paramPbcY + 0.5

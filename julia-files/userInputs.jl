@@ -97,10 +97,11 @@ module userInputs
         nRuns::Int64        # Number of times to run
         parallel::Int64     # Parallel (1 or 0)
         numCores::Int64     # Number of parallel cores
+        relax            # Run relaxation if data doesn't exist
 
         function llgParams( arr )
             return new( Int(arr[1]), arr[2], arr[3], arr[4], arr[5], arr[6],
-                Int(arr[7]), Int(arr[8]), Int(arr[9]) )
+                Int(arr[7]), Int(arr[8]), Int(arr[9]), Int(arr[10]) )
         end
 
     end
@@ -324,7 +325,7 @@ module userInputs
     # areas when copying between structs has to be done.
     function buildParamStruct(
         mpList = [0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-        llgList = [ 0, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0 ],
+        llgList = [ 0, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0, 0 ],
         faList = [0, 0.0, 0.0, 0.0, 0.0, 0, 0.0],
         icList = ["", 0, 0.0, 0, 0],
         pinList = [ 0.0],
@@ -416,8 +417,8 @@ module userInputs
 
             myLlgParams = getComputationParams( llgParams, [ "Max iterations", "Step size",
                 "Skip size", "Tolerance", "Damping", "Temperature", "Number of runs",
-                "Parallelize (1 or 0)", "If parallel, number of cores"],
-                [10000, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0, 1] )
+                "Parallelize (1 or 0)", "If parallel, number of cores","Run relaxation first?"],
+                [10000, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0, 1,1] )
             myFaParams = []
 
         elseif ans == "2"
@@ -440,7 +441,6 @@ module userInputs
         myICParams = getComputationParams( icParams,
             ["Initial condition", "lambda", "gamma", "x position", "y position"],
             ["skyrmion", 5, pi/2 , myMatParams.nx/2, myMatParams.ny/2] )
-
 
         ################################################
         # Problem-specific options start here
