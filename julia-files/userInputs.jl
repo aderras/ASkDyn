@@ -24,7 +24,7 @@ module userInputs
 
     using dipoleDipole,effectiveField
     export getUserParams, buildParamStruct, params, copyStruct!,
-        getParamList!,setFieldNestedStruct!
+        getParamList!,setFieldNestedStruct!,getConfirmation
 
     # Material parameters
     mutable struct materialParams
@@ -39,7 +39,7 @@ module userInputs
         nz::Int         # Lattice size in z
         pbc::Float64    # Periodic boundary conditions
 
-        vdd             # Matrices to be used to compute DDI. It
+        v              # Matrices to be used to compute DDI. It
                         # is advantageous to compute these once and
                         # store them because this is slow.
 
@@ -48,7 +48,7 @@ module userInputs
 
             # If there is dipole-dipole energy, calculate V matrices
             if arr[5] != 0.0
-                v = vddMatrices( Int(arr[6]) , Int(arr[7]), Int(arr[8]), 1.0==arr[9])
+                v = vdMatrices( Int(arr[6]) , Int(arr[7]), Int(arr[8]), 1.0==arr[9])
                 return new( arr[1], arr[2], arr[3], arr[4], arr[5],
                     Int(arr[6]), Int(arr[7]), Int(arr[8]), arr[9], v )
             else
@@ -90,7 +90,7 @@ module userInputs
 
         tMax::Int64         # Maximum number of steps to make
         dt::Float64         # Step size
-        saveEvery::Float64  # Skip this many steps to save
+        nn::Float64         # Skip this many steps to save
         tol::Float64        # Tolerance for convergence
         damp::Float64       # Damping in llg
         temp::Float64       # Temperature
@@ -526,6 +526,52 @@ module userInputs
             myPinningParams, myDefectParams, mySaveChoices, myParamRanges] )
 
         return allParams
+
+    end
+
+    function getConfirmation( p )
+
+        println( "\nMATERIAL PARAMETERS " )
+        println( " [J, H, A, DZ, ED, Nx, Ny, Nz, PBC] = ",
+            [getfield(p.mp,x) for x in fieldnames(typeof( p.mp )) ][1:9] )
+
+        println("\nLLG CHOICES")
+        println( " [tMax, dt, nSteps, tol, damping, T, nRuns, parallel,",
+            " numCores, runRelaxation] = ",
+            [getfield(p.llg,x) for x in fieldnames(typeof( p.llg )) ])
+        println(" + With these choices you save data when the time step is ",
+            "a multiple of ", p.llg.dt * p.llg.nn * 2)
+        if p.llg.damp == 0.0
+            println( " + Running zero damping dynamics (unrealistic). " )
+        elseif p.llg.damp == 1.0
+            println( " + Running with relaxation damping." )
+        end
+        println( " + Skipping relaxation computation = ", p.llg.relax == 0.0 )
+
+        println( "\nINITIAL CONDITION"  )
+        println(" [type, r, chirality, icx, icy] = ",
+            [getfield(p.ic,x) for x in fieldnames(typeof( p.ic )) ] )
+
+        println( "\nPINNED = ", p.pin.hPin != 0.0 )
+
+        println( "\nDEFECT = ", p.pin.hPin == 0.0 )
+        println(" [type, strength, width, position x, postion y] = ",
+            [getfield(p.defect,x) for x in fieldnames(typeof( p.defect ))][1:5] )
+
+        println( "\nCURRENT = ", p.current.jx !=0.0, ", ", p.current.jy !=0.0 )
+
+        println("\nVARY PARAMS ")
+        println(p.range)
+
+        ans = getUserInput( String, string("\nAre these choices correct? y/n "))
+
+
+        if ans == "y"
+            return true
+        else
+            return false
+
+        end
 
     end
 
