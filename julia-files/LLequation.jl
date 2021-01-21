@@ -1,61 +1,70 @@
-# This module contains functions that define the Landau Lifshitz Gilbert equations
-#
+#=
+
+    This module contains functions that define the Landau Lifshitz Gilbert
+    equations with current.
+
+           dS/dt = S x H_eff - lambda * S x (S x H_eff) - [Current Term]
+
+           [Current Term] = Sum_{nu} j_{nu} S x (dS/dnu x S)
+
+    All the 'x' symbols are cross products. The sum over nu is the sum over
+    dimensions [x,y]. The effective field is calculated in the eponymous module.
+
+=#
 module LLequation
 
-    import effectiveField
+    import EffectiveField
     export RHS!
 
-    # RHS computes the right side of ds/dt = ...
+    # RHS computes the right side of ds/dt = ... from LLG by updating 'mat'
     #
-    # inputs: t = current timestep, mat = spin array, params = all the
-    # parameters to be used in the computation.
+    # in: t = current timestep, mat = current spin array, params = all the
+    # parameters, relax = relaxation == true/false (default false)
     #
-    # outputs: nothing
-    function RHS!( t::Float64, mat::Array{Float64,3}, matRHS::Array{Float64,3},
-        params, flag=false )
+    # out: nothing
+    function RHS!(t::AbstractFloat, mat::Array{AbstractFloat,3},
+        matRHS::Array{AbstractFloat,3}, params, relax=false)
 
         p, m, n = size(mat)
 
-        llgParams = params.llg
-
-        tMax, hStep, nn, tol, lambda, T, nRuns, par =
-            [ getfield(llgParams, x) for x in fieldnames( typeof(llgParams) ) ]
-
-        # If running relaxation, use high damping
-        if flag
+        # If running relaxation, set damping to 1. Otherwise use user input.
+        if relax
             lambda = 1.0
+        else
+            lambda = params.llg.damp
         end
 
-        Heff = Array{Float64}(undef,p,m,n)
+        Heff = Array{AbstractFloat}(undef,p,m,n)
 
-        # calculate effective field
-        Heff = effectiveField.getFullEffField!( mat, params )
+        # Calculate effective field.
+        Heff = EffectiveField.effectivefield(mat, params)
 
-        # calculate S dot H.
+        # Calculate S dot H.
         SDotH = zeros(1,m,n)
-        SDotH .= sum( mat.*Heff, dims=1 )
+        SDotH .= sum(mat.*Heff, dims=1)
 
-        fillRHS!( mat, Heff, SDotH, matRHS, lambda )
+        fillRHS!(mat, Heff, SDotH, matRHS, lambda)
 
-        # Only add current if nonzer and this is dynamics (not relaxation)
-        if (params.current.jx!=0 && flag==false ) ||
-            (params.current.jy!=0 && flag==false)
+        # Only add current if nonzero and this is dynamics (not relaxation).
+        if (params.current.jx != 0.0 && relax==false) ||
+            (params.current.jy != 0.0 && relax==false)
 
-            addCurrent!( mat, matRHS, params.current )
+            addCurrent!(mat, matRHS, params.current)
 
         end
 
     end
 
-    # Right side of LL equation
+    # LLG implemented here.
     #
-    # inputs: mat = (3, m, n) spin array, Heff = (3, m, n) effective field matrix,
-    # SDotH = (m, n, 1) array of SDotH, matRHS = (3, m, n) right hand side of
-    # LL equation. Updates this value
+    # in: mat = (3,m,n) spin array, Heff = (3,m,n) effective field
+    # matrix, SDotH = (m,n,1) array of SDotH, matRHS = (3,m,n) right
+    # side of LLG equation (modifies this matrix)
     #
-    # outputs: nothing
-    function fillRHS!( mat::Array{Float64,3}, Heff::Array{Float64,3},
-        SDotH::Array{Float64,3}, matRHS::Array{Float64,3}, lambda::Float64)
+    # out: nothing
+    function fillRHS!(mat::Array{AbstractFloat,3}, Heff::Array{AbstractFloat,3},
+        SDotH::Array{AbstractFloat,3}, matRHS::Array{AbstractFloat,3},
+        lambda::AbstractFloat)
 
         p, m, n = size(mat)
 
@@ -70,7 +79,15 @@ module LLequation
 
     end
 
-    function addCurrent!( s::Array{Float64,3}, matRHS::Array{Float64,3}, current )
+    # Current implemented here.
+    #
+    # in: s = (3,m,n) spin array, matRHS = (3,m,n) right side of LLG equation
+    # (matRHS is updated in the function), current = struct from UserInputs
+    # containing current parameters
+    #
+    # out: nothing
+    function addCurrent!(s::Array{AbstractFloat,3},
+        matRHS::Array{AbstractFloat,3}, current)
 
         jx = current.jx
         jy = current.jy
@@ -79,7 +96,7 @@ module LLequation
 
         for i in 1:m, j in 1:n
 
-            # Periodic BC always used
+            # Periodic BC always used. Define neighbors here.
             iNext =  i%m + 1
             if i==1
                 iPrev = m
@@ -93,27 +110,31 @@ module LLequation
             else
                 jPrev = j-1
             end
-            # First order finite difference used for DeltaX and Delta Y
-            # It would probably be faster to compute this matrix first, rather
-            # than in every iteration
-            DeltaX = (1/2) * ( s[:,iNext,j] - s[:,iPrev,j] )
-            DeltaY = (1/2) * ( s[:,i,jNext] - s[:,i,jPrev] )
 
-            # Cross product of DeltaX and s_{i,j}
-            DeltaXCrossS = [ DeltaX[2]*s[3,i,j] - DeltaX[3]*s[2,i,j],
-                                -DeltaX[1]*s[3,i,j] + DeltaX[3]*s[1,i,j],
-                                DeltaX[1]*s[2,i,j] - DeltaX[2]*s[1,i,j] ]
+            # First order finite difference used for deltaX and Delta Y
+            # (It may be faster to compute this matrix first, rather
+            # than in every iteration.)
+            deltaX = (1/2) * (s[:,iNext,j] - s[:,iPrev,j])
+            deltaY = (1/2) * (s[:,i,jNext] - s[:,i,jPrev])
 
-            DeltaYCrossS = [ DeltaY[2]*s[3,i,j] - DeltaY[3]*s[2,i,j],
-                                -DeltaY[1]*s[3,i,j] + DeltaY[3]*s[1,i,j],
-                                DeltaY[1]*s[2,i,j] - DeltaY[2]*s[1,i,j] ]
+            # Cross product of deltaX and s_{i,j}
+            deltaXCrossS = [ deltaX[2]*s[3,i,j] - deltaX[3]*s[2,i,j],
+                                -deltaX[1]*s[3,i,j] + deltaX[3]*s[1,i,j],
+                                deltaX[1]*s[2,i,j] - deltaX[2]*s[1,i,j] ]
 
-            matRHS[1,i,j] += -jx* ( s[2,i,j]*DeltaXCrossS[3] - s[3,i,j]*DeltaXCrossS[2] ) -
-                              jy* ( s[2,i,j]*DeltaYCrossS[3] - s[3,i,j]*DeltaYCrossS[2] )
-            matRHS[2,i,j] += -jx* ( -s[1,i,j]*DeltaXCrossS[3] + s[3,i,j]*DeltaXCrossS[1] ) -
-                              jy* ( -s[1,i,j]*DeltaYCrossS[3] + s[3,i,j]*DeltaYCrossS[1] )
-            matRHS[3,i,j] += -jx* ( s[1,i,j]*DeltaXCrossS[2] - s[2,i,j]*DeltaXCrossS[1] ) -
-                              jy* ( s[1,i,j]*DeltaYCrossS[2] - s[2,i,j]*DeltaYCrossS[1] )
+            deltaYCrossS = [ deltaY[2]*s[3,i,j] - deltaY[3]*s[2,i,j],
+                                -deltaY[1]*s[3,i,j] + deltaY[3]*s[1,i,j],
+                                deltaY[1]*s[2,i,j] - deltaY[2]*s[1,i,j] ]
+
+            matRHS[1,i,j] += -jx* (s[2,i,j]*deltaXCrossS[3] -
+                    s[3,i,j]*deltaXCrossS[2]) - jy* (s[2,i,j]*deltaYCrossS[3] -
+                    s[3,i,j]*deltaYCrossS[2])
+            matRHS[2,i,j] += -jx* (-s[1,i,j]*deltaXCrossS[3] +
+                    s[3,i,j]*deltaXCrossS[1]) - jy* (-s[1,i,j]*deltaYCrossS[3] +
+                    s[3,i,j]*deltaYCrossS[1])
+            matRHS[3,i,j] += -jx* (s[1,i,j]*deltaXCrossS[2] -
+                    s[2,i,j]*deltaXCrossS[1]) - jy* (s[1,i,j]*deltaYCrossS[2] -
+                    s[2,i,j]*deltaYCrossS[1])
         end
 
     end
