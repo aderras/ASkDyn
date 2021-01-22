@@ -25,23 +25,17 @@ When the script is executed, results are saved to the directory "/data/" by defa
 
 ## Works that use this package
 
-% Skyrmions near defects %
-A. Derras-Chouk and E. M. Chudnovsky, (2020); https://arxiv.org/abs/2010.14683
+A. Derras-Chouk and E. M. Chudnovsky, "Skyrmions near defects" (2020); arXiv: 2010.14683
 
-% Thermal collapse of a skyrmion %
-A. Derras-Chouk, E. M. Chudnovsky, and D. A. Garanin, J. Appl. Phys. 126, 083901 (2019); https://doi.org/10.1063/1.5109728
+A. Derras-Chouk, E. M. Chudnovsky, and D. A. Garanin, "Thermal collapse of a skyrmion," *J. Appl. Phys.* **126**, 083901, (2019); doi: 10.1063/1.5109728
 
 ## References
 
-% Random field XY model in three dimensions %
 <a id="1">[1]</a>
-D. A. Garanin, E. M. Chudnovsky, and T. Proctor, Phys. Rev. B **88**, 224418 (2013); https://doi.org/10.1103/PhysRevB.88.224418
+D. A. Garanin, E. M. Chudnovsky, and T. Proctor, "Random field XY model in three dimensions," *Phys. Rev. B* **88**, 224418, (2013); doi: 10.1103/PhysRevB.88.224418
 
-% Pulse noise approach for classical spin systems %
 <a id="1">[2]</a>
-D. A. Garanin, Phys. Rev. E **95**, 013306 (2016); https://doi.org/10.1103/PhysRevE.95.013306
+D. A. Garanin, "Pulse noise approach for classical spin systems," *Phys. Rev. E* **95**, 013306 (2016); doi: 10.1103/PhysRevE.95.013306
 
-% Two-dimensional periodic boundary conditions for demagnetization interactions in micromagnetics %
 <a id="1">[3]</a>
-W. Wang, C. Mu, B. Zhang, Q. Liu, J. Wang, and D. Xue, Comput. Mater. Sci. **49**, 84
-(2010); https://doi.org/10.1016/j.commatsci.2010.04.024
+W. Wang, C. Mu, B. Zhang, Q. Liu, J. Wang, and D. Xue, "Two-dimensional periodic boundary conditions for demagnetization interactions in micromagnetics," *Comput. Mater. Sci.* **49**, 84 (2010); doi: 10.1016/j.commatsci.2010.04.024
