@@ -64,7 +64,7 @@ module DipoleDipole
     # out: (Nx,Ny) matrix
     function buildvd(stype::String, Nx::Int, Ny::Int, Nz::Int, pbc)
 
-        if pbc==1.0==true
+        if pbc == 1.0
 
             if Nx%2 == Ny%2 == 0
                 VD = zeros(2*Nx,2*Ny)
