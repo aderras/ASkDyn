@@ -23,7 +23,7 @@ To run the program, execute ''julia runScript.jl'' in terminal. A series of prom
 
 When the script is executed, results are saved to the directory "/data/" by default. All data is stored in HDF5 format.
 
-## Works that use this package
+## Works using this
 
 A. Derras-Chouk and E. M. Chudnovsky, "Skyrmions near defects" (2020); arXiv: 2010.14683
 
