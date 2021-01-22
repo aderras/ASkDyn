@@ -77,7 +77,7 @@ module SpinDynamics
 
         # Directory where results are saved. By default, saves to
         # parentDirectory() + "/data/"
-        reldir = string(dirname(pwd()),"/data/")
+        reldir = string(pwd(),"/data/")
 
         filesuffix = string("T=",params.llg.temp,"_H=",h,"_A=",
             a,"_DZ=",round(dz,digits=5),"_ED=",round(ed,digits=5),"_ICX=",
@@ -142,8 +142,8 @@ module SpinDynamics
             if params.save.pmaE == 1.0
                 pmaArray[i] = pma_energy(mat, dz)
             end
-            if params.save.ddiE == 1.0
-                ddiArray[i] = ddi_energy(mat, ed, vdd)
+            if params.save.ddiE == 1.0 
+                ddiArray[i] = ddi_energy(mat, ed, pbc, vdd)
             end
             if params.save.magn == 1.0
                 magnArray[i] = magnetization(mat)

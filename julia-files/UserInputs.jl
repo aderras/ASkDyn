@@ -52,8 +52,10 @@ module UserInputs
                 return new(arr[1], arr[2], arr[3], arr[4], arr[5],
                     Int(arr[6]), Int(arr[7]), Int(arr[8]), arr[9], v)
             else
+                dummyv = [[0.0 0.0; 0.0 0.0],[0.0 0.0; 0.0 0.0],
+                [0.0 0.0; 0.0 0.0],[0.0 0.0; 0.0 0.0]]
                 return new(arr[1], arr[2], arr[3], arr[4], arr[5],
-                    Int(arr[6]), Int(arr[7]), Int(arr[8]), arr[9], [])
+                    Int(arr[6]), Int(arr[7]), Int(arr[8]), arr[9], dummyv)
             end
         end
 

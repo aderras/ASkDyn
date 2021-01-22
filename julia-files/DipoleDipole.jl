@@ -29,7 +29,7 @@ IMPROVEMENTS
 =#
 module DipoleDipole
 
-    using FFTW
+    using FFTW, PaddedViews
     export fhd, convfft, buildvd
 
     # We precompute matrices used to calculate the dipole-dipole interaction

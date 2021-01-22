@@ -33,7 +33,7 @@ module FieldAlignment
         j,h,a,dz,ed,nx,ny,nz,pbc,v =
             [getfield(params.mp, x) for x in fieldnames(typeof(params.mp))]
 
-        reldir = string(dirname(pwd()),"/data/")
+        reldir = string(pwd(),"/data/")
 
         filesuffix = string("fa_H=",h,"_A=",a,"_DZ=",round(dz,digits=5),"_ED=",
             round(ed,digits=5),"_ICX=",params.ic.px,"_.h5")
@@ -99,7 +99,7 @@ module FieldAlignment
                 pmaArray[i] = pma_energy(mat, dz)
             end
             if params.save.ddiE == 1.0
-                ddiArray[i] = ddi_energy(mat, ed, v)
+                ddiArray[i] = ddi_energy(mat, ed, pbc, v)
             end
             if params.save.magn == 1.0
                 magnArray[i] = magnetization(mat)
