@@ -199,7 +199,7 @@ module Energy
     function ddi_energy(mat::Array{Float64,3}, ed::Float64,
         pbc::Float64, phiMatrices::Array{Array{Float64,2},1})
 
-        if size(phiMatrices[1]) == (2,2)
+        if ed == 0
             return 0.0
         end
 
