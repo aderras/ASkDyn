@@ -41,10 +41,10 @@ module DipoleDipole
     # out: Array of 4 (Nx,Ny) matrices
     function vdmatrices(Nx::Int, Ny::Int, Nz::Int, pbc)
 
-        phixx = Array{AbstractFloat}(undef,2*Nx,2*Ny)
-        phiyy = Array{AbstractFloat}(undef,2*Nx,2*Ny)
-        phizz = Array{AbstractFloat}(undef,2*Nx,2*Ny)
-        phixy = Array{AbstractFloat}(undef,2*Nx,2*Ny)
+        phixx = Array{Float64}(undef,2*Nx,2*Ny)
+        phiyy = Array{Float64}(undef,2*Nx,2*Ny)
+        phizz = Array{Float64}(undef,2*Nx,2*Ny)
+        phixy = Array{Float64}(undef,2*Nx,2*Ny)
 
         phixx = buildvd("xx",Nx,Ny,Nz,pbc)
         phiyy = buildvd("yy",Nx,Ny,Nz,pbc)
@@ -64,7 +64,7 @@ module DipoleDipole
     # out: (Nx,Ny) matrix
     function buildvd(stype::String, Nx::Int, Ny::Int, Nz::Int, pbc)
 
-        if pbc==true
+        if pbc==1.0==true
 
             if Nx%2 == Ny%2 == 0
                 VD = zeros(2*Nx,2*Ny)
@@ -102,7 +102,7 @@ module DipoleDipole
         (-1)/(sqrt((a^2 + b^2)^2 * (a^2 + b^2))) end
     @inline phixy(a,b) = if a==b==0 0. else
         (3.0* a * b)/denominator(a,b,0.) end
-    @inline denominator(a::AbstractFloat,b::AbstractFloat,c::AbstractFloat) =
+    @inline denominator(a::Float64,b::Float64,c::Float64) =
         sqrt((a^2 + b^2 + c^2)^2*(a^2 + b^2 + c^2)^2*(a^2 + b^2 + c^2))
 
     @inline Fxx(nx,ny,Tx,Ty) = nx*ny/(4*pi*Tx*Ty*(nx^2)*sqrt(nx^2 + ny^2 ))
@@ -240,9 +240,9 @@ module DipoleDipole
 
         p,m,n = size(mat)
 
-        matx = Array{AbstractFloat}(undef,m,n)
-        maty = Array{AbstractFloat}(undef,m,n)
-        matz = Array{AbstractFloat}(undef,m,n)
+        matx = Array{Float64}(undef,m,n)
+        maty = Array{Float64}(undef,m,n)
+        matz = Array{Float64}(undef,m,n)
         matx,maty,matz = slicematrix(mat)
 
         return permutedims(cat(dims=3,
@@ -266,7 +266,7 @@ module DipoleDipole
         ax,ay = size(a)
         bx,by = size(b)
 
-        res     = Array{AbstractFloat}(undef,bx,by)
+        res     = Array{Float64}(undef,bx,by)
 
         apadded = PaddedView(0.0, a, (Base.OneTo(bx), Base.OneTo(by)))
         res = real(ifft(fft(apadded).*fft(b)))
@@ -284,13 +284,13 @@ module DipoleDipole
     # in: (3, Nx, Ny) array
     #
     # out: [Bx,By,Bz] where each B is an (Nx,Ny) array
-    function slicematrix(A::Array{AbstractFloat,3})
+    function slicematrix(A::Array{Float64,3})
 
         p,m,n = size(A)
 
-        B1 = Array{AbstractFloat}(undef,m,n)
-        B2 = Array{AbstractFloat}(undef,m,n)
-        B3 = Array{AbstractFloat}(undef,m,n)
+        B1 = Array{Float64}(undef,m,n)
+        B2 = Array{Float64}(undef,m,n)
+        B3 = Array{Float64}(undef,m,n)
 
         for i in 1:m
             for j in 1:n

@@ -7,7 +7,7 @@ using UserInputs, Distributed, SpinDynamics
 userParams = getuserinputs()
 
 # Get confirmation
-confirm = getconfirmation(testParams)
+confirm = getconfirmation(userParams)
 if confirm == false
     exit()
 end

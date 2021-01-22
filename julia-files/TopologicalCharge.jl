@@ -11,13 +11,13 @@ module TopologicalCharge
     #
     # in: mat = NxNx3 spin array
     # out: q = float
-    function calcQ(mat::Array{AbstractFloat,3})
+    function calcQ(mat::Array{Float64,3})
 
         p,m,n = size(mat)
         q = 0.0
 
-        dxsQ = Array{AbstractFloat}(undef,p,m,n)
-        dysQ = Array{AbstractFloat}(undef,p,m,n)
+        dxsQ = Array{Float64}(undef,p,m,n)
+        dysQ = Array{Float64}(undef,p,m,n)
         # dxsQ = zeros(p,m,n)
         # dysQ = zeros(p,m,n)
 
@@ -50,12 +50,12 @@ module TopologicalCharge
     # in: mat = NxNx3 spin array, rotNum = 3x1 array of integers
     # containing the amount of times to shift rows and columns.
     # out: matNew = rotated matix.
-    function rotateright!(mat::Array{AbstractFloat,3},rotNum::Array{Int,1})
+    function rotateright!(mat::Array{Float64,3},rotNum::Array{Int,1})
 
         p,m,n = size(mat)
 
-        matNew = Array{AbstractFloat}(undef,p,m,n)
-        matTemp = Array{AbstractFloat}(undef,p,m,n)
+        matNew = Array{Float64}(undef,p,m,n)
+        matTemp = Array{Float64}(undef,p,m,n)
 
         matTemp .= mat
 
@@ -79,7 +79,7 @@ module TopologicalCharge
     # in: mat = NxNx3 spin matrix, matNew = NxNx3 shifted mat,
     # i,j = index of the element to shift, ishift = amount to shift by
     # out: nothing. The result is stored in matNew.
-    function shiftrows!(mat::Array{AbstractFloat,3}, matNew::Array{AbstractFloat,3},
+    function shiftrows!(mat::Array{Float64,3}, matNew::Array{Float64,3},
         i::Int, j::Int, ishift::Int)
 
         p,m,n = size(mat)
@@ -112,7 +112,7 @@ module TopologicalCharge
     # in: mat = NxNx3 spin matrix, matNew = NxNx3 shifted mat,
     # i,j = index of the element to shift, jshift = amount to shift by
     # out: nothing. The result is stored in matNew.
-    function shiftcols!(mat::Array{AbstractFloat,3}, matNew::Array{AbstractFloat,3},
+    function shiftcols!(mat::Array{Float64,3}, matNew::Array{Float64,3},
         i::Int, j::Int, jshift::Int)
 
         p,m,n = size(mat)

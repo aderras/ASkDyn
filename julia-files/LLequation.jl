@@ -22,8 +22,8 @@ module LLequation
     # parameters, relax = relaxation == true/false (default false)
     #
     # out: nothing
-    function RHS!(t::AbstractFloat, mat::Array{AbstractFloat,3},
-        matRHS::Array{AbstractFloat,3}, params, relax=false)
+    function RHS!(t::Float64, mat::Array{Float64,3},
+        matRHS::Array{Float64,3}, params, relax=false)
 
         p, m, n = size(mat)
 
@@ -34,7 +34,7 @@ module LLequation
             lambda = params.llg.damp
         end
 
-        Heff = Array{AbstractFloat}(undef,p,m,n)
+        Heff = Array{Float64}(undef,p,m,n)
 
         # Calculate effective field.
         Heff = EffectiveField.effectivefield(mat, params)
@@ -62,9 +62,9 @@ module LLequation
     # side of LLG equation (modifies this matrix)
     #
     # out: nothing
-    function fillRHS!(mat::Array{AbstractFloat,3}, Heff::Array{AbstractFloat,3},
-        SDotH::Array{AbstractFloat,3}, matRHS::Array{AbstractFloat,3},
-        lambda::AbstractFloat)
+    function fillRHS!(mat::Array{Float64,3}, Heff::Array{Float64,3},
+        SDotH::Array{Float64,3}, matRHS::Array{Float64,3},
+        lambda::Float64)
 
         p, m, n = size(mat)
 
@@ -86,8 +86,8 @@ module LLequation
     # containing current parameters
     #
     # out: nothing
-    function addCurrent!(s::Array{AbstractFloat,3},
-        matRHS::Array{AbstractFloat,3}, current)
+    function addCurrent!(s::Array{Float64,3},
+        matRHS::Array{Float64,3}, current)
 
         jx = current.jx
         jy = current.jy

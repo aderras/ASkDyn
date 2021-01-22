@@ -7,7 +7,7 @@ module EffectiveSize
     #
     # in: spin array (3, m, n)
     # out: float
-    function effectivesize(mat::Array{AbstractFloat,3})
+    function effectivesize(mat::Array{Float64,3})
 
         p, m, n = size(mat)
 

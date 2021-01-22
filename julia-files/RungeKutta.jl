@@ -17,7 +17,7 @@ module RungeKutta
     # X0, params = struct of evaluation parameters, relax = relaxation (T/F)
     #
     # out = nothing
-    function rk4!(X0::Array{AbstractFloat,3}, f::Function, params, relax=false)
+    function rk4!(X0::Array{Float64,3}, f::Function, params, relax=false)
 
         p, m, n = size(X0)
 
@@ -30,11 +30,11 @@ module RungeKutta
         t0 = 0.0
 
         # Initialize arrays for the RK steps
-        K1 = Array{AbstractFloat}(undef,p,m,n)
-        K2 = Array{AbstractFloat}(undef,p,m,n)
-        K3 = Array{AbstractFloat}(undef,p,m,n)
-        K4 = Array{AbstractFloat}(undef,p,m,n)
-        X = Array{AbstractFloat}(undef,p,m,n)
+        K1 = Array{Float64}(undef,p,m,n)
+        K2 = Array{Float64}(undef,p,m,n)
+        K3 = Array{Float64}(undef,p,m,n)
+        K4 = Array{Float64}(undef,p,m,n)
+        X = Array{Float64}(undef,p,m,n)
 
         X .= X0 # starting with specified
 

@@ -7,14 +7,14 @@ module NoiseRotation
     using Normalize, LinearAlgebra
     export noisyrotate!
 
-    function noisyrotate!(mat::Array{AbstractFloat,3}, llgParams)
+    function noisyrotate!(mat::Array{Float64,3}, llgParams)
 
         p, m, n = size(mat)
 
-        Φ = Array{AbstractFloat}(undef,p,m,n)
-        ϕ = Array{AbstractFloat}(undef,3)
-        s = Array{AbstractFloat}(undef,3)
-        nn = Array{AbstractFloat}(undef,3)
+        Φ = Array{Float64}(undef,p,m,n)
+        ϕ = Array{Float64}(undef,3)
+        s = Array{Float64}(undef,3)
+        nn = Array{Float64}(undef,3)
 
         sdotn = 0.0
 

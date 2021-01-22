@@ -3,9 +3,9 @@
 # saves the resulting data.
 module SpinDynamics
 
-    using  Energy, TopologicalCharge, LLequation, Magnetization, rungeKutta,
-    LLequation, Normalize, noiseRotation, Dates, EffectiveSize,
-    InitialCondition, Distributed, fieldAlignment
+    using HDF5, Energy, TopologicalCharge, LLequation, Magnetization, RungeKutta,
+    LLequation, Normalize, NoiseRotation, Dates, EffectiveSize,
+    InitialCondition, Distributed, FieldAlignment
 
     export launchcomputation, rundynamics!, runRelaxation!, compute_ll!
 
@@ -39,7 +39,7 @@ module SpinDynamics
                 a,"_DZ=",round(dz,digits=5),"_ED=",round(ed,digits=5),"_ICX=",
                 p.ic.px,"_.h5")
 
-            filename = string(relaxDir,"final-spin-field_",filesuffix), "Dataset1"
+            filename = string(relaxDir,"final-spin-field_", filesuffix)
 
             if isfile(filename)
 
@@ -65,7 +65,7 @@ module SpinDynamics
 
     # in: mat = (N,N,3) initial condition, params struct
     # out: returns nothing. Modifies mat and exports data to disk
-    function rundynamics!(mat::Array{AbstractFloat,3}, params, relaxation = false)
+    function rundynamics!(mat::Array{Float64,3}, params, relaxation = false)
 
         maxLoop = params.llg.tMax
 
@@ -84,7 +84,7 @@ module SpinDynamics
             params.ic.px,"_.h5")
 
         if relaxation
-            filesuffix = string("relaxation_",filesuffix), "Dataset1"
+            filesuffix = string("relaxation_", filesuffix)
         end
 
         if params.save.excE == 1.0
@@ -122,7 +122,7 @@ module SpinDynamics
         # configuration
         # println("Running relaxation on the spin lattice. ")
         # @time runRelaxation!(mat, params)
-        # h5write(string(reldir,"initial-spin-field_",filesuffix), "Dataset1",mat)
+        # h5write(string(reldir,"initial-spin-field_", filesuffix), "Dataset1", mat)
 
         # Stopping criteria: energy converges to within some tolerance
         # or topological charge becomes negative
@@ -157,8 +157,7 @@ module SpinDynamics
                 locArray[i*2] = maxPos[2]
             end
             if params.save.spinField == 1.0 && i%10==0
-                h5write(string(reldir,"spin-field-i=",i,"_",filesuffix),
-                    "Dataset1",mat)
+                h5write(string(reldir,"spin-field-i=",i,"_", filesuffix), "Dataset1",mat)
             end
 
             enArray[i] = energy(mat, params)
@@ -190,53 +189,53 @@ module SpinDynamics
         #         params.defect.strength,"_D-WIDTH=",params,defect,width,"_",timestampString,"_.h5")
 
         if params.save.excE == 1.0
-            h5write(string(reldir,"exchange-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"exchange-energy_", filesuffix), "Dataset1",
             filter(x->x!=0.,excArray))
         end
         if params.save.zeeE == 1.0
-            h5write(string(reldir,"zeeman-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"zeeman-energy_", filesuffix), "Dataset1",
             filter(x->x!=0.,zeeArray))
         end
         if params.save.dmiE == 1.0
-            h5write(string(reldir,"dmi-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"dmi-energy_", filesuffix), "Dataset1",
             filter(x->x!=0.,dmiArray))
         end
         if params.save.pmaE == 1.0
-            h5write(string(reldir,"pma-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"pma-energy_", filesuffix), "Dataset1",
             filter(x->x!=0.,pmaArray))
         end
         if params.save.ddiE == 1.0
-            h5write(string(reldir,"ddi-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"ddi-energy_", filesuffix), "Dataset1",
             filter(x->x!=0.,ddiArray))
         end
         if params.save.magn == 1.0
-            h5write(string(reldir,"magnetization_",filesuffix), "Dataset1",
+            h5write(string(reldir,"magnetization_", filesuffix), "Dataset1",
             filter(x->x!=0.,magnArray))
         end
         if params.save.size == 1.0
-            h5write(string(reldir,"effective-size_",filesuffix), "Dataset1",
+            h5write(string(reldir,"effective-size_", filesuffix), "Dataset1",
             filter(x->x!=0.,sizeArray))
         end
         if params.save.location == 1.0
-            h5write(string(reldir,"max-spin-location_",filesuffix), "Dataset1",
+            h5write(string(reldir,"max-spin-location_", filesuffix), "Dataset1",
             filter(x->x!=0.,locArray))
         end
         if params.save.totE == 1.0
-            h5write(string(reldir,"total-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"total-energy_", filesuffix), "Dataset1",
             filter(x->x!=0.,enArray))
         end
         if params.save.qCharge == 1.0
-            h5write(string(reldir,"topological-charge_",filesuffix), "Dataset1",
+            h5write(string(reldir,"topological-charge_", filesuffix), "Dataset1",
             filter(x->x!=0.,qArray))
         end
 
         # Always save the final spin field
-        h5write(string(reldir,"final-spin-field_",filesuffix), "Dataset1",mat)
+        h5write(string(reldir,"final-spin-field_", filesuffix), "Dataset1", mat)
 
     end
 
     # Calculates Landau Lifshitz equation
-    function compute_ll!(s::Array{AbstractFloat,3}, params, relaxation = false)
+    function compute_ll!(s::Array{Float64,3}, params, relaxation = false)
 
         # This is the pulse-noise algorithm
         if params.llg.temp == 0.0

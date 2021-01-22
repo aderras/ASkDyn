@@ -8,7 +8,7 @@ module Normalize
     # in: 3D array
     #
     # out: nothing
-    function normalizelattice!(mat::Array{AbstractFloat,3})
+    function normalizelattice!(mat::Array{Float64,3})
 
         normVal = 0.0
 

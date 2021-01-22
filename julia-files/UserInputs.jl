@@ -29,15 +29,15 @@ module UserInputs
     # Material parameters
     mutable struct materialParams
 
-        j::AbstractFloat      # Exchange interaction
-        h::AbstractFloat      # Zeeman field
-        a::AbstractFloat      # Dzayaloshinskii-Moriya interaction
-        dz::AbstractFloat     # Perpendicular magnetic anisotropy
-        ed::AbstractFloat     # Dipole-dipole constant
+        j::Float64      # Exchange interaction
+        h::Float64      # Zeeman field
+        a::Float64      # Dzayaloshinskii-Moriya interaction
+        dz::Float64     # Perpendicular magnetic anisotropy
+        ed::Float64     # Dipole-dipole constant
         nx::Int         # Lattice size in x
         ny::Int         # Lattice size in y
         nz::Int         # Lattice size in z
-        pbc::AbstractFloat    # Periodic boundary conditions
+        pbc::Float64    # Periodic boundary conditions
 
         v               # Matrices to be used to compute DDI. It
                         # is advantageous to compute these once and
@@ -89,11 +89,11 @@ module UserInputs
     mutable struct llgParams
 
         tMax::Int         # Maximum number of steps to make
-        dt::AbstractFloat         # Step size
-        nn::AbstractFloat         # Skip this many steps to save
-        tol::AbstractFloat        # Tolerance for convergence
-        damp::AbstractFloat       # Damping in llg
-        temp::AbstractFloat       # Temperature
+        dt::Float64         # Step size
+        nn::Float64         # Skip this many steps to save
+        tol::Float64        # Tolerance for convergence
+        damp::Float64       # Damping in llg
+        temp::Float64       # Temperature
         nRuns::Int        # Number of times to run
         parallel::Int     # Parallel (1 or 0)
         numCores::Int     # Number of parallel cores
@@ -110,10 +110,10 @@ module UserInputs
     mutable struct faParams
 
         sMax::Int         # Maximum number of steps to make
-        param::AbstractFloat      # Field alignment param
-        nRot::AbstractFloat       # Number of rotations to make
-        tol::AbstractFloat        # Tolerance for convergence
-        nRuns::AbstractFloat      # Number of times to run
+        param::Float64      # Field alignment param
+        nRot::Float64       # Number of rotations to make
+        tol::Float64        # Tolerance for convergence
+        nRuns::Float64      # Number of times to run
         parallel::Int     # Parallel (1 or 0)
         numCores::Int     # Number of parallel cores
 
@@ -128,8 +128,8 @@ module UserInputs
     mutable struct icParams
 
         type::String        # Type of spin structure
-        r::AbstractFloat          # Radius (only makes sense for skyrmion)
-        gamma::AbstractFloat      # Chirality (only skyrmion)
+        r::Float64          # Radius (only makes sense for skyrmion)
+        gamma::Float64      # Chirality (only skyrmion)
         px::Int           # Position in x direction (0 < px < nx)
         py::Int           # Position in y direction (0 < py < ny)
 
@@ -141,7 +141,7 @@ module UserInputs
     # Pinning parameters
     mutable struct pinningParams
 
-        hPin::AbstractFloat       # Pinning field strength
+        hPin::Float64       # Pinning field strength
 
         function pinningParams(arr)
             return new(arr[1])
@@ -153,8 +153,8 @@ module UserInputs
     mutable struct defectParams
 
         t                   # Type of defect (1 = Point, 2 = Gaussian)
-        strength::AbstractFloat   # Strength of the defect
-        width::AbstractFloat      # Width of impact
+        strength::Float64   # Strength of the defect
+        width::Float64      # Width of impact
         dx::Int           # x position (0 < dx < nx)
         dy::Int           # y position (0 < dy < ny)
         jMat
@@ -173,9 +173,9 @@ module UserInputs
 
     mutable struct currentParams
 
-        jx::AbstractFloat          # Current in the x direction
-        jy::AbstractFloat          # y direction
-        tf::AbstractFloat          # Cutoff time for current application
+        jx::Float64          # Current in the x direction
+        jy::Float64          # y direction
+        tf::Float64          # Cutoff time for current application
 
         function currentParams(arr)
             return new(arr[1], arr[2], arr[3])
@@ -262,7 +262,7 @@ module UserInputs
     function getComputationParams(paramType, paramList::Array{String,1},
         defaultList)
 
-        ans = getUserInput(String, string("\nEnter paramters ",
+        ans = getUserInput(String, string("\nEnter parameters ",
             [i for i in paramList], "? y/n "))
 
         # If user wants to enter parameters, get them
@@ -372,7 +372,7 @@ module UserInputs
         string("\nRun the computation over a range of parameters?
         Enter n to choose 'no' and run for only selected choices. y/n "))
 
-        myParamRanges = paramRanges([[], [], [], [], [], [], [], [], []])
+        myParamRanges = paramRanges([[],[],[],[],[],[],[],[],[],[],[],[]])
 
         if ans == "y"
             ans = getUserInput(String,
@@ -424,7 +424,7 @@ module UserInputs
                 "Step size","Skip size", "Tolerance", "Damping", "Temperature",
                 "Number of runs","Parallelize (1 or 0)",
                 "If parallel, number of cores","Run relaxation first?"],
-                [10000, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0, 1,1])
+                [10, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0, 1,1])
             myFaParams = []
 
         elseif ans == "2"
@@ -440,7 +440,7 @@ module UserInputs
                 "Step size","Skip size", "Tolerance", "Damping", "Temperature",
                 "Number of runs","Parallelize (1 or 0)",
                 "If parallel, number of cores"],
-                [10000, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0, 1])
+                [10, 0.2, 5.0, 10^-6, 1.0, 0.0, 1, 0, 1, 1])
             myFaParams = []
 
         end
@@ -481,11 +481,11 @@ module UserInputs
 
         # If user wants to introduce a current, get values
         if ans == "y"
-            myCurrentParams = getComputationParams(defectParams,
-                ["Ix", "Iy"],
-                [0.2, -0.1])
+            myCurrentParams = getComputationParams(currentParams,
+                ["Ix", "Iy", "tF"],
+                [0.2, -0.1, 0])
         else
-            myCurrentParams = []
+            myCurrentParams = currentParams([0.0,0.0,0])
         end
 
 
@@ -530,7 +530,8 @@ module UserInputs
 
         # Now put all of the user choices into one struct
         allParams = params([myMatParams, myLlgParams, myFaParams, myICParams,
-            myPinningParams, myDefectParams, mySaveChoices, myParamRanges])
+            myPinningParams, myDefectParams, mySaveChoices, myParamRanges,
+            myCurrentParams])
 
         return allParams
 

@@ -38,8 +38,8 @@ module InitialCondition
         Nx = mp.nx
         Ny = mp.ny
 
-        # mat = Array{AbstractFloat}(undef,Nx,Ny,3)
-        mat = zeros(3,Nx,Ny)
+        mat = Array{Float64}(undef,3,Nx,Ny)
+        #mat = zeros(3,Nx,Ny)
         xx = 0.
         yy = 0.
 
@@ -144,8 +144,8 @@ module InitialCondition
     # λ = the radius, Q = topological charge, ϕ = chirality
     #
     # out: {x,y,z} vector representing skyrmion components at x,y
-    function skyrmioncomponent!(val::Array{AbstractFloat},x::AbstractFloat,
-        y::AbstractFloat,λ::AbstractFloat)
+    function skyrmioncomponent!(val::Array{Float64,1},x::Float64,
+        y::Float64,λ::Float64)
 
         Q = 1.
         ϕ = pi/2

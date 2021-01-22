@@ -45,8 +45,8 @@ module EffectiveField
     # defectParams = defect parameters (optional argument)
     #
     # out: nothing
-    function effectivefieldelem!(effField::Array{AbstractFloat,1},
-        mat::Array{AbstractFloat,3}, nx::Int, ny::Int, params)
+    function effectivefieldelem!(effField::Array{Float64,1},
+        mat::Array{Float64,3}, nx::Int, ny::Int, params)
 
         matParams = params.mp
 
@@ -83,8 +83,8 @@ module EffectiveField
     # constant, pbc = periodic boundary conditions
     #
     # out: nothing
-    function exchangefieldelem!(effField::Array{AbstractFloat,1},
-        mat::Array{AbstractFloat,3}, nx::Int, ny::Int, J::AbstractFloat, pbc)
+    function exchangefieldelem!(effField::Array{Float64,1},
+        mat::Array{Float64,3}, nx::Int, ny::Int, J::Float64, pbc)
 
         p, m, n = size(mat)
 
@@ -93,12 +93,12 @@ module EffectiveField
                 effField[k] = effField[k] + J*(mat[k,nx-1,ny] + mat[k,nx+1,ny])
             end
         elseif nx==1
-            if pbc
+            if pbc==1.0
                 for k in 1:3 effField[k] = effField[k] + J * mat[k,m,ny] end
             end
             for k in 1:3 effField[k] = effField[k] + J * mat[k,nx+1,ny] end
         elseif nx == m
-            if pbc
+            if pbc==1.0
                 for k in 1:3 effField[k] = effField[k] + J * mat[k,1,ny] end
             end
             for k in 1:3 effField[k] = effField[k] + J * mat[k,nx-1,ny] end
@@ -109,12 +109,12 @@ module EffectiveField
                 effField[k] = effField[k] + J*(mat[k,nx,ny-1] + mat[k,nx,ny+1])
             end
         elseif ny==1
-            if pbc
+            if pbc==1.0
                 for k in 1:3 effField[k] = effField[k] + J * mat[k,nx,n] end
             end
             for k in 1:3 effField[k] = effField[k] + J * mat[k,nx,ny+1] end
         elseif ny==n
-            if pbc
+            if pbc==1.0
                 for k in 1:3 effField[k] = effField[k] + J * mat[k,nx,1] end
             end
             for k in 1:3 effField[k] = effField[k] + J * mat[k,nx,ny-1] end
@@ -130,8 +130,8 @@ module EffectiveField
     # of all computation parameters
     #
     # out: nothing
-    function exchangefieldelem!(effField::Array{AbstractFloat,1},
-        mat::Array{AbstractFloat,3}, nx::Int, ny::Int, params)
+    function exchangefieldelem!(effField::Array{Float64,1},
+        mat::Array{Float64,3}, nx::Int, ny::Int, params)
 
         defType,aJ,dJ,jx,jy = [getfield(params.defect, x)
             for x in fieldnames(typeof(params.defect))]
@@ -151,7 +151,7 @@ module EffectiveField
                     Jmod(nx-1/2, ny) * (mat[k,nx-1,ny] + mat[k,nx+1,ny])
             end
         elseif nx == 1
-            if pbc
+            if pbc==1.0
                 for k in 1:3
                     effField[k] = effField[k] + Jmod(nx-1/2, ny) * mat[k,m,ny]
                 end
@@ -161,7 +161,7 @@ module EffectiveField
                 effField[k] = effField[k] + Jmod(nx+1/2, ny) * mat[k,nx+1,ny]
             end
         elseif nx == m
-            if pbc
+            if pbc==1.0
                 for k in 1:3
                     effField[k] = effField[k] + Jmod(nx+1/2, ny) * mat[k,1,ny]
                 end
@@ -179,7 +179,7 @@ module EffectiveField
                     Jmod(nx, ny-1/2) * (mat[k,nx,ny-1] + mat[k,nx,ny+1])
             end
         elseif ny == 1
-            if pbc
+            if pbc==1.0
                 for k in 1:3
                     effField[k] = effField[k] + Jmod(nx, ny-1/2) * mat[k,nx,n]
                 end
@@ -189,7 +189,7 @@ module EffectiveField
             end
 
         elseif ny == n
-            if pbc
+            if pbc==1.0
                 for k in 1:3
                     effField[k] = effField[k] + Jmod(nx, ny+1/2) * mat[k,nx,1]
                 end
@@ -208,14 +208,14 @@ module EffectiveField
     # constant, pbc = periodic boundary conditions
     #
     # out: nothing
-    function dmifieldelem!(effField::Array{AbstractFloat,1},
-        mat::Array{AbstractFloat,3}, nx::Int, ny::Int, dmi::AbstractFloat, pbc)
+    function dmifieldelem!(effField::Array{Float64,1},
+        mat::Array{Float64,3}, nx::Int, ny::Int, dmi::Float64, pbc)
 
         p,m,n = size(mat)
 
         if ny==1
 
-            if pbc
+            if pbc==1.0
                 effField[1]-=dmi*mat[3,nx,n];
                 effField[3]+=dmi*mat[1,nx,n];
             end
@@ -225,7 +225,7 @@ module EffectiveField
 
         elseif ny==n
 
-            if pbc
+            if pbc==1.0
                 effField[1]+=dmi*mat[3,nx,1];
                 effField[3]-=dmi*mat[1,nx,1];
             end
@@ -242,7 +242,7 @@ module EffectiveField
 
         if nx==1
 
-            if pbc
+            if pbc==1.0
 
                 effField[2]+=dmi*mat[3,m,ny];
                 effField[3]-=dmi*mat[2,m,ny];
@@ -254,7 +254,7 @@ module EffectiveField
 
         elseif nx==m
 
-            if pbc
+            if pbc==1.0
 
                 effField[2]-=dmi*mat[3,1,ny];
                 effField[3]+=dmi*mat[2,1,ny];
@@ -280,8 +280,8 @@ module EffectiveField
     # nx & ny are coordinates of in the spin matrix, pma = anisotropy constant
     #
     # out: nothing
-    function pmafieldelem!(effField::Array{AbstractFloat,1},
-        mat::Array{AbstractFloat,3}, nx::Int, ny::Int, pma::AbstractFloat)
+    function pmafieldelem!(effField::Array{Float64,1},
+        mat::Array{Float64,3}, nx::Int, ny::Int, pma::Float64)
 
         effField[3] += pma*mat[3,nx,ny]
 
@@ -295,7 +295,7 @@ module EffectiveField
     #
     # out: (3, m, n) array defining effective field at every point in the
     # input array, mat
-    function effectivefield(mat::Array{AbstractFloat,3}, params)
+    function effectivefield(mat::Array{Float64,3}, params)
 
         matParams = params.mp
         j,h,a,dz,ed,n,m,nz,pbc,v =
@@ -315,7 +315,7 @@ module EffectiveField
         end
 
         if ed != 0.0
-            dipField = Array{AbstractFloat}(undef, 3, m, n)
+            dipField = Array{Float64}(undef, 3, m, n)
             dipField = ddifield(mat, ed, pbc==1.0, v)
 
             Heff = Heff + dipField
@@ -346,8 +346,8 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function exchangefield!(Heff::Array{AbstractFloat,3},
-        mat::Array{AbstractFloat,3}, params)
+    function exchangefield!(Heff::Array{Float64,3},
+        mat::Array{Float64,3}, params)
 
         p, m, n = size(mat)
 
@@ -373,7 +373,7 @@ module EffectiveField
 		    Heff[k,i,j] += mat[k,i,j-1]
 	    end
 
-    	if pbc
+    	if pbc==1.0
     		for j in 1:n, k in 1:p
     		    Heff[k,m,j] += mat[k,1,j]
     		    Heff[k,1,j] += mat[k,m,j]
@@ -401,8 +401,8 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function exchangefield_defect!(Heff::Array{AbstractFloat,3},
-        mat::Array{AbstractFloat,3}, params)
+    function exchangefield_defect!(Heff::Array{Float64,3},
+        mat::Array{Float64,3}, params)
 
         p, m, n = size(mat)
         pbc = params.mp.pbc == 1.0
@@ -414,7 +414,7 @@ module EffectiveField
             for ny in 1:m
                 for nx in 1:n
 
-                    if pbc
+                    if pbc==1.0
                         nxNext = nx%m + 1
                         nyNext = ny%n + 1
 
@@ -495,8 +495,8 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function dmifield!(Heff::Array{AbstractFloat,3},
-        mat::Array{AbstractFloat,3}, params)
+    function dmifield!(Heff::Array{Float64,3},
+        mat::Array{Float64,3}, params)
 
         p,m,n = size(mat)
 
@@ -506,7 +506,7 @@ module EffectiveField
         for nx in 1:m, ny in 1:n
 
             if ny==1
-                if pbc
+                if pbc==1.0
                     Heff[1,nx,ny] = Heff[1,nx,ny] - dmi*mat[3,nx,n]
                     Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*mat[1,nx,n]
                 end
@@ -514,7 +514,7 @@ module EffectiveField
                 Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*mat[1,nx,ny+1]
 
             elseif ny==n
-                if pbc
+                if pbc==1.0
                     Heff[1,nx,ny] = Heff[1,nx,ny] + dmi*mat[3,nx,1]
                     Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*mat[1,nx,1]
                 end
@@ -527,7 +527,7 @@ module EffectiveField
             end
 
             if nx==1
-                if pbc
+                if pbc==1.0
                     Heff[2,nx,ny] = Heff[2,nx,ny] + dmi*mat[3,m,ny]
                     Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*mat[2,m,ny]
                 end
@@ -535,7 +535,7 @@ module EffectiveField
                 Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*mat[2,nx+1,ny]
 
             elseif nx==m
-                if pbc
+                if pbc==1.0
                     Heff[2,nx,ny] = Heff[2,nx,ny] - dmi*mat[3,1,ny]
                     Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*mat[2,1,ny]
                 end
@@ -558,8 +558,8 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function zeemanfield!(Heff::Array{AbstractFloat,3},
-        mat::Array{AbstractFloat,3}, params)
+    function zeemanfield!(Heff::Array{Float64,3},
+        mat::Array{Float64,3}, params)
 
         p, m, n = size(mat)
 
@@ -578,8 +578,8 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function pmafield!(Heff::Array{AbstractFloat,3},
-        mat::Array{AbstractFloat,3}, params)
+    function pmafield!(Heff::Array{Float64,3},
+        mat::Array{Float64,3}, params)
 
         p, m, n = size(mat)
 
@@ -599,11 +599,11 @@ module EffectiveField
     #
     # out: field = (3, m, n) array containing values of DDI field
     # at every point of mat.
-    function ddifield(mat::Array{AbstractFloat,3}, ed::AbstractFloat, pbc,
+    function ddifield(mat::Array{Float64,3}, ed::Float64, pbc,
         phiMatrices::Array{Array{AbstractFloat,2},1})
 
         p, m, n = size(mat)
-        field = Array{AbstractFloat}(undef, p, m, n)
+        field = Array{Float64}(undef, p, m, n)
 
         field = ed * DipoleDipole.fhd(mat, phiMatrices, pbc)
 

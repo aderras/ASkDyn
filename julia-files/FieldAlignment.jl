@@ -13,8 +13,8 @@
 =#
 module FieldAlignment
 
-    using EffectiveField, Energy, TopologicalCharge, EffectiveSize,  
-    LinearAlgebra, Normalize
+    using EffectiveField, Energy, TopologicalCharge, EffectiveSize,
+    LinearAlgebra, Normalize, HDF5
     export runfieldalignment!, modifyspin!
 
     # This function runs modifyspin! until the magnetization settles
@@ -25,7 +25,7 @@ module FieldAlignment
     # parameters
     #
     # out: nothing
-    function runfieldalignment!(mat::Array{AbstractFloat,3}, params)
+    function runfieldalignment!(mat::Array{Float64,3}, params)
 
         maxLoop, alpha, nrot, tol =
             [getfield(params.fa, x) for x in fieldnames(typeof(params.fa))]
@@ -126,46 +126,46 @@ module FieldAlignment
 
 
         if params.save.totE == 1.0
-            h5write(string(reldir,"total-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"total-energy_", filesuffix), "Dataset1",
             filter(xx->xx!=0.0,enArray))
         end
         if params.save.excE == 1.0
-            h5write(string(reldir,"exchange-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"exchange-energy_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,excArray))
         end
         if params.save.zeeE == 1.0
-            h5write(string(reldir,"zeeman-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"zeeman-energy_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,zeeArray))
         end
         if params.save.dmiE == 1.0
-            h5write(string(reldir,"dmi-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"dmi-energy_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,dmiArray))
         end
         if params.save.pmaE == 1.0
-            h5write(string(reldir,"pma-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"pma-energy_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,pmaArray))
         end
         if params.save.ddiE == 1.0
-            h5write(string(reldir,"ddi-energy_",filesuffix), "Dataset1",
+            h5write(string(reldir,"ddi-energy_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,ddiArray))
         end
         if params.save.magn == 1.0
-            h5write(string(reldir,"magnetization_",filesuffix), "Dataset1",
+            h5write(string(reldir,"magnetization_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,magnArray))
         end
         if params.save.location == 1.0
-            h5write(string(reldir,"max-spin-location_",filesuffix), "Dataset1",
+            h5write(string(reldir,"max-spin-location_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,locArray))
         end
         if params.save.qCharge == 1.0
-            h5write(string(reldir,"topological-charge_",filesuffix), "Dataset1",
+            h5write(string(reldir,"topological-charge_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,qArray))
         end
 
         # Always save the final spin field
-        h5write(string(reldir,"effective-size_",filesuffix), "Dataset1",
+        h5write(string(reldir,"effective-size_", filesuffix), "Dataset1",
             filter(xx->xx!=0.,sizeArray))
-        h5write(string(reldir,"final-spin-field_",filesuffix), "Dataset1", mat)
+        h5write(string(reldir,"final-spin-field_", filesuffix), "Dataset1",  mat)
 
     end
 
@@ -177,7 +177,7 @@ module FieldAlignment
 
     # inputs: mat = spin matrix, α = randomness parameter, N = number of spins
     # outputs: nothing
-    function modifyspin!(mat::Array{AbstractFloat,3}, ddiField::Array{AbstractFloat,3},
+    function modifyspin!(mat::Array{Float64,3}, ddiField::Array{Float64,3},
             params)
 
         p,m,n = size(mat)
@@ -197,9 +197,9 @@ module FieldAlignment
         # scurrent = a copy of the spin element we're looking at
         # hcurrent = the effective field at scurrent
         # sreplace = the spin to change into
-        scurrent = Array{AbstractFloat}(undef,3)
-        hcurrent = Array{AbstractFloat}(undef,3)
-        sreplace = Array{AbstractFloat}(undef,3)
+        scurrent = Array{Float64}(undef,3)
+        hcurrent = Array{Float64}(undef,3)
+        sreplace = Array{Float64}(undef,3)
 
         randomdirection!(startx,starty,endx,endy,dx,dy)
 
