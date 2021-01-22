@@ -8,11 +8,11 @@ export magnetization
 
 	function magnetization(mat)
 
-		p,m,n = size(mat)
+		p, m, n = size(mat)
 		mz = 0.
 
-		for i in eachindex(view(mat,1,1:m,1:n))
-			mz = mz + mat[i[1],i[2],3]
+		for i in 1:m, j in 1:n
+			mz = mz + mat[3,i,j]
 		end
 
 		return mz/(m*n)
