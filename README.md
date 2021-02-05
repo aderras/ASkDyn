@@ -1,4 +1,4 @@
-# Skyrmion Atomistic Dynamics
+# Atomistic Skyrmion Dynamics
 
 Author: Amel Derras-Chouk
 
