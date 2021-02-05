@@ -1,4 +1,4 @@
-# Skyrmion Micromagnetics
+# Skyrmion Atomistic Dynamics
 
 Author: Amel Derras-Chouk
 
