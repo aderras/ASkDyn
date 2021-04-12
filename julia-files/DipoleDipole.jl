@@ -30,7 +30,7 @@ IMPROVEMENTS
 module DipoleDipole
 
     using FFTW, PaddedViews
-    export fhd, convfft, buildvd
+    export fhd, convfft, buildvd, vdmatrices
 
     # We precompute matrices used to calculate the dipole-dipole interaction
     # with this function. It essentially contains information about the

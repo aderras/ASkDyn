@@ -48,7 +48,7 @@ module UserInputs
 
             # If there is dipole-dipole Energy, calculate V matrices
             if arr[5] != 0.0
-                v = vdMatrices(Int(arr[6]),Int(arr[7]),Int(arr[8]),1.0==arr[9])
+                v = vdmatrices(Int(arr[6]),Int(arr[7]),Int(arr[8]),1.0==arr[9])
                 return new(arr[1], arr[2], arr[3], arr[4], arr[5],
                     Int(arr[6]), Int(arr[7]), Int(arr[8]), arr[9], v)
             else
@@ -91,15 +91,15 @@ module UserInputs
     mutable struct llgParams
 
         tMax::Int         # Maximum number of steps to make
-        dt::Float64         # Step size
-        nn::Float64         # Skip this many steps to save
-        tol::Float64        # Tolerance for convergence
-        damp::Float64       # Damping in llg
-        temp::Float64       # Temperature
+        dt::Float64       # Step size
+        nn::Float64       # Skip this many steps to save
+        tol::Float64      # Tolerance for convergence
+        damp::Float64     # Damping in llg
+        temp::Float64     # Temperature
         nRuns::Int        # Number of times to run
         parallel::Int     # Parallel (1 or 0)
         numCores::Int     # Number of parallel cores
-        relax            # Run relaxation if data doesn't exist
+        relax             # Run relaxation if data doesn't exist
 
         function llgParams(arr)
             return new(Int(arr[1]), arr[2], arr[3], arr[4], arr[5], arr[6],

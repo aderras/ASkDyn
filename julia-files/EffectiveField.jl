@@ -600,7 +600,7 @@ module EffectiveField
     # out: field = (3, m, n) array containing values of DDI field
     # at every point of mat.
     function ddifield(mat::Array{Float64,3}, ed::Float64, pbc,
-        phiMatrices::Array{Array{AbstractFloat,2},1})
+        phiMatrices::Array{Array{Float64,2},1})
 
         p, m, n = size(mat)
         field = Array{Float64}(undef, p, m, n)
