@@ -23,15 +23,6 @@ module SpinDynamics
             s0 = buildinitial(p.ic, p.mp)
             rundynamics!(s0, p, true)
 
-            # Testing linear extrapolation. Delete when done. ##################
-            # @time InitialCondition.extrapolateEdges(s0)
-            # l,r,t,b = InitialCondition.extrapolateEdges(s0)
-            # print(size(l))
-            # println(l[1,:])
-            # println(l[2,:])
-            # println(l[3,:])
-            ####################################################################
-
         elseif p.llg.relax == 2
 
             println("Computing relaxation with field-alignment algorithm.")
@@ -68,7 +59,7 @@ module SpinDynamics
         end
 
         # Then dynamics
-        # rundynamics!(s0, p)
+        rundynamics!(s0, p)
 
         println("Completed eval on worker ", myid())
 
