@@ -7,6 +7,8 @@ module SpinDynamics
     LLequation, Normalize, NoiseRotation, Dates, EffectiveSize,
     InitialCondition, Distributed, FieldAlignment
 
+    using BenchmarkTools
+
     export launchcomputation, rundynamics!, runRelaxation!, compute_ll!
 
     # Given a struct of parameters, compute the spin dynamics
@@ -20,6 +22,15 @@ module SpinDynamics
             println("Computing relaxation with LLG and high damping. ")
             s0 = buildinitial(p.ic, p.mp)
             rundynamics!(s0, p, true)
+
+            # Testing linear extrapolation. Delete when done. ##################
+            # @time InitialCondition.extrapolateEdges(s0)
+            # l,r,t,b = InitialCondition.extrapolateEdges(s0)
+            # print(size(l))
+            # println(l[1,:])
+            # println(l[2,:])
+            # println(l[3,:])
+            ####################################################################
 
         elseif p.llg.relax == 2
 
@@ -57,7 +68,7 @@ module SpinDynamics
         end
 
         # Then dynamics
-        rundynamics!(s0, p)
+        # rundynamics!(s0, p)
 
         println("Completed eval on worker ", myid())
 
@@ -131,18 +142,18 @@ module SpinDynamics
             compute_ll!(mat, params, relaxation)
 
             if params.save.excE == 1.0
-                excArray[i] = exchange_energy(mat, j, pbc==1.0, params.defect)
+                excArray[i] = exchange_energy(mat, j, pbc, params.defect)
             end
             if params.save.zeeE == 1.0
                 zeeArray[i] = zeeman_energy(mat, h)
             end
             if params.save.dmiE == 1.0
-                dmiArray[i] = dmi_energy(mat, a, pbc==1.0)
+                dmiArray[i] = dmi_energy(mat, a, pbc)
             end
             if params.save.pmaE == 1.0
                 pmaArray[i] = pma_energy(mat, dz)
             end
-            if params.save.ddiE == 1.0 
+            if params.save.ddiE == 1.0
                 ddiArray[i] = ddi_energy(mat, ed, pbc, vdd)
             end
             if params.save.magn == 1.0

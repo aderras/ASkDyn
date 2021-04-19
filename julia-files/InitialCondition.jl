@@ -169,5 +169,34 @@ module InitialCondition
 
     end
 
+    # Extrapolate the nearest-neighbors magnetic moments of the edge-lattice
+    # sites using linear equation
+    #
+    # in: (3,Nx,Ny) spin array
+    # out: array of arrays containing [left,right,top,bottom] neighbors
+    function extrapolateEdges(mat)
+
+        p,m,n = size(mat)
+
+        leftN = zeros(3,m)
+        rightN = zeros(3,m)
+        topN = zeros(3,n)
+        bottomN = zeros(3,n)
+
+        for i in 1:m, k in 1:3
+            leftN[k,i] = (mat[k,i,2]-mat[k,i,1])*(-1) + mat[k,i,1]
+        end
+        for i in 1:m, k in 1:3
+            rightN[k,i] = (mat[k,i,m-1]-mat[k,i,m]) + mat[k,i,m-1]
+        end
+        for j in 1:n, k in 1:3
+            topN[k,j] = (mat[k,2,j]-mat[k,1,j])*(-1) + mat[k,1,j]
+        end
+        for j in 1:n, k in 1:3
+            bottomN[k,j] = (mat[k,n-1,j]-mat[k,n,j]) + mat[k,n-1,j]
+        end
+
+        return [leftN, rightN, topN, bottomN]
+    end
 
 end

@@ -10,7 +10,7 @@
 =#
 module Energy
 
-    import DipoleDipole
+    import DipoleDipole, InitialCondition
     export energy, exchange_energy, zeeman_energy, dmi_energy,
         pma_energy, ddi_energy
 
@@ -28,13 +28,16 @@ module Energy
         j,h,a,dz,ed,nx,ny,nz,pbc,vd = [getfield(params.mp, x)
             for x in fieldnames(typeof(params.mp))]
 
-        en = exchange_energy(mat, j, pbc, params.defect)
+        extrap = []
+        if pbc==2.0 extrap = InitialCondition.extrapolateEdges(mat) end
+
+        en = exchange_energy(mat, j, pbc, params.defect, extrap)
 
         if h != 0.0
             en += zeeman_energy(mat, h)
         end
         if a != 0.0
-            en += dmi_energy(mat, a, pbc)
+            en += dmi_energy(mat, a, pbc, extrap)
         end
         if dz != 0.0
             en += pma_energy(mat, dz)
@@ -73,15 +76,18 @@ module Energy
     # conditions
     #
     # out: float
-    function dmi_energy(mat::Array{Float64,3}, a::Float64, pbc)
+    function dmi_energy(mat::Array{Float64,3}, a::Float64, pbc::Float64,
+        edges=[])
 
         p, m, n = size(mat)
         en = 0.0
 
+        if pbc==2.0 leftN, rightN, topN, bottomN = edges end
+
         # The following is for nx > 1
         for i in 2:m
             for j in 1:n
-                en += mat[2,i,j] * mat[3,i-1,j] - mat[3,i,j]*mat[2,i-1,j]
+                en += mat[2,i,j]*mat[3,i-1,j] - mat[3,i,j]*mat[2,i-1,j]
             end
         end
 
@@ -93,14 +99,20 @@ module Energy
         end
 
         # Deal with the edge of the matrix. If periodic boundary
-        # conditions, run the following. Otherwise do nothing
         if pbc==1.0
             for i in 1:n
                 en += (mat[2,1,i]*mat[3,m,i] - mat[3,1,i]*mat[2,m,i])
             end
-
             for i in 1:m
                 en += (mat[3,i,1]*mat[1,i,n] - mat[1,i,1]*mat[3,i,n])
+            end
+
+        elseif pbc==2.0
+            for i in 1:n
+                en += bottomN[2,i]*mat[3,m,i] - bottomN[3,i]*mat[2,m,i]
+            end
+            for i in 1:m
+                en += rightN[3,i]*mat[1,i,n] - rightN[1,i]*mat[3,i,n]
             end
         end
 
@@ -118,11 +130,13 @@ module Energy
     # defect
     #
     # out: float
-    function exchange_energy(mat::Array{Float64,3}, J::Float64,
-        pbc, dParams)
+    function exchange_energy(mat::Array{Float64,3}, J::Float64,pbc::Float64,
+        dParams, edges=[])
 
         p, m, n = size(mat)
         en = 0.0
+
+        if pbc==2.0 leftN, rightN, topN, bottomN = edges end
 
         # If there is a defect and the point of interest is within the range
         # of the defect, change the total exchange energy
@@ -150,6 +164,15 @@ module Energy
                     en += mat[k,i,1] * mat[k,i,n]
                 end
 
+                en -= (2 * m * n)
+
+            elseif pbc==2.0
+                for j in 1:n, k in 1:p
+                    en += mat[k,m,j] * rightN[k,j]
+                end
+                for i in 1:m, k in 1:p
+                    en += mat[k,i,n] * bottomN[k,i]
+                end
                 en -= (2 * m * n)
             else
                 en -= (2 * m * n - m - n)
@@ -185,8 +208,6 @@ module Energy
 
             return en
         end
-
-
     end
 
 

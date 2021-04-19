@@ -12,9 +12,9 @@ ed = 0.001
 dz = 4*pi*ed
 nx = ny = 64
 nz = 10
-pbc = true
+pbc = 2.0 # 0.0=nothing, 1.0=pbc, 2.0=linear extrapolation
 
-mpList = [ j, h, a, dz, ed, nx, ny, nz, pbc ]
+mpList = [j, h, a, dz, ed, nx, ny, nz, pbc]
 
 tMax = 5
 dt = 0.2
@@ -25,7 +25,7 @@ T = 0.0
 numRuns = 1
 parallel = 0
 numCores = 1
-runRelaxation = 1 # 0 = skip, 1 = LLG with damping = 1, 2 = FA relaxation
+runRelaxation = 1 # 0=skip, 1=LLG with damping set to 1, 2=FA relaxation
 
 llgList = [tMax, dt, nSteps, tol, damping, T, numRuns, parallel, numCores,
     runRelaxation]
@@ -35,16 +35,16 @@ faList = [tMax, 0.3, 10, tol, numRuns, parallel, numCores]
 type = "skyrmion"
 r = 10
 chirality = pi/2
-icx = nx/2-8
+icx = nx/2
 icy = ny/2
 
-icList = [ type, r, chirality, icx, icy ]
+icList = [type, r, chirality, icx, icy]
 
 pinField = 0.0
 
-pinList = [ pinField ]
+pinList = [pinField]
 
-defType = 0.0 # 0.0 = None, 1.0 = point, 2.0 = Gaussian
+defType = 0.0 # 0.0=None, 1.0=point, 2.0=Gaussian
 defStrength = 0.0
 defWidth = 0.0
 defX = 0

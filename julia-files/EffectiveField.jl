@@ -29,10 +29,11 @@
 
     IMPROVEMENTS:
         + Rewrite exchangefield_defect! in a faster julian way
+        + Implement extrapolated boundary conditions for exchange with defect
 =#
 module EffectiveField
 
-    import DipoleDipole
+    import DipoleDipole, InitialCondition
     export effectivefieldelem!, effectivefield, ddifield, defectarray,
     exchangefield!, zeemanfield!, pmafield!, dmifield!
 
@@ -60,14 +61,14 @@ module EffectiveField
 
         # Compute exchange field
         if params.defect.t==0
-            exchangefieldelem!(effField, mat, nx, ny, j, pbc==1.0)
+            exchangefieldelem!(effField, mat, nx, ny, j, pbc)
         elseif params.defect.t==2
             exchangefieldelem!(effField, mat, nx, ny, params )
         end
 
         # Compute DMI and PMA if they're not set to zero
         if a != 0.0
-            dmifieldelem!(effField, mat, nx, ny, a, pbc==1.0)
+            dmifieldelem!(effField, mat, nx, ny, a, pbc)
         end
         if dz != 0.0
             pmafieldelem!(effField, mat, nx, ny, dz)
@@ -84,9 +85,12 @@ module EffectiveField
     #
     # out: nothing
     function exchangefieldelem!(effField::Array{Float64,1},
-        mat::Array{Float64,3}, nx::Int, ny::Int, J::Float64, pbc)
+        mat::Array{Float64,3}, nx::Int, ny::Int, J::Float64, pbc::Float64)
 
         p, m, n = size(mat)
+        extrap = []
+        if pbc==2.0 extrap = InitialCondition.extrapolateEdges(mat) end
+
 
         if nx > 1 && nx < m
             for k in 1:3
@@ -95,10 +99,14 @@ module EffectiveField
         elseif nx==1
             if pbc==1.0
                 for k in 1:3 effField[k] = effField[k] + J * mat[k,m,ny] end
+            elseif pbc==2.0
+                for k in 1:3 effField[k] = effField[k] + J * mat[k,m,ny] end
             end
             for k in 1:3 effField[k] = effField[k] + J * mat[k,nx+1,ny] end
         elseif nx == m
             if pbc==1.0
+                for k in 1:3 effField[k] = effField[k] + J * mat[k,1,ny] end
+            elseif pbc==2.0
                 for k in 1:3 effField[k] = effField[k] + J * mat[k,1,ny] end
             end
             for k in 1:3 effField[k] = effField[k] + J * mat[k,nx-1,ny] end
@@ -136,7 +144,7 @@ module EffectiveField
         defType,aJ,dJ,jx,jy = [getfield(params.defect, x)
             for x in fieldnames(typeof(params.defect))]
         J = params.mp.j
-        pbc = params.mp.pbc==1.0
+        pbc = params.mp.pbc
 
         # This is the Gaussian-type of defect we consider. The exchange
         # constant is modified by a maximum of aJ at the location of the
@@ -209,7 +217,7 @@ module EffectiveField
     #
     # out: nothing
     function dmifieldelem!(effField::Array{Float64,1},
-        mat::Array{Float64,3}, nx::Int, ny::Int, dmi::Float64, pbc)
+        mat::Array{Float64,3}, nx::Int, ny::Int, dmi::Float64, pbc::Float64)
 
         p,m,n = size(mat)
 
@@ -301,14 +309,17 @@ module EffectiveField
         j,h,a,dz,ed,n,m,nz,pbc,v =
             [getfield(matParams, x) for x in fieldnames(typeof(matParams))]
 
+        extrap = []
+        if pbc==2.0 extrap = InitialCondition.extrapolateEdges(mat) end
+
         Heff = zeros(3, m, n)
 
         # Exchange effective field
-        exchangefield!(Heff, mat, params)
+        exchangefield!(Heff, mat, params, extrap)
         zeemanfield!(Heff, mat, params)
 
         if a != 0.0
-            dmifield!(Heff, mat, params)
+            dmifield!(Heff, mat, params, extrap)
         end
         if dz != 0.0
             pmafield!(Heff, mat, params)
@@ -316,7 +327,7 @@ module EffectiveField
 
         if ed != 0.0
             dipField = Array{Float64}(undef, 3, m, n)
-            dipField = ddifield(mat, ed, pbc==1.0, v)
+            dipField = ddifield(mat, ed, pbc, v)
 
             Heff = Heff + dipField
         end
@@ -347,18 +358,18 @@ module EffectiveField
     #
     # out: nothing
     function exchangefield!(Heff::Array{Float64,3},
-        mat::Array{Float64,3}, params)
+        mat::Array{Float64,3}, params, edges=[])
 
         p, m, n = size(mat)
 
         if params.defect.t == 2
-            exchangefield_defect!(Heff, mat, params)
+            exchangefield_defect!(Heff, mat, params, edges=[])
             return
         end
 
         J = params.mp.j
 
-        pbc = params.mp.pbc == 1.0
+        pbc = params.mp.pbc
 
         for j in 1:n, i in 1:m-1, k in 1:p
             Heff[k,i,j] += mat[k,i+1,j]
@@ -382,9 +393,17 @@ module EffectiveField
     		    Heff[k,i,1] += mat[k,i,n]
     		    Heff[k,i,n] += mat[k,i,1]
     		end
-    	end
-
-
+    	elseif pbc==2.0
+            leftN, rightN, topN, bottomN = edges
+            for j in 1:n, k in 1:p
+    		    Heff[k,m,j] += bottomN[k,j]
+    		    Heff[k,1,j] += topN[k,j]
+    		end
+            for i in 1:m, k in 1:p
+    		    Heff[k,i,1] += leftN[k,i]
+    		    Heff[k,i,n] += rightN[k,i]
+    		end
+        end
     end
 
     # Compute the exchange field of the entire spin array, mat, that contains
@@ -395,6 +414,7 @@ module EffectiveField
     # between lattice points, so to compute the effective field at lattice site
     # (nx,ny), we need the locations of all the bonds connected to it. This is
     # time-intensive, so precomputing improves speed.
+    # NOTE: EXTRAPOLATED BC NOT IMPLEMENTED
     #
     # in: mat = (3,m,n) spin array, params = struct of all material params,
     # Heff = (3,m,n) array of the effective field which is modified to store
@@ -402,10 +422,10 @@ module EffectiveField
     #
     # out: nothing
     function exchangefield_defect!(Heff::Array{Float64,3},
-        mat::Array{Float64,3}, params)
+        mat::Array{Float64,3}, params, edges=[])
 
         p, m, n = size(mat)
-        pbc = params.mp.pbc == 1.0
+        pbc = params.mp.pbc
 
         # There's a tiny improvement in benchmark speed by writing the for
         # loop this way. Not sure if it's real improvement, but I'll take what
@@ -414,7 +434,7 @@ module EffectiveField
             for ny in 1:m
                 for nx in 1:n
 
-                    if pbc==1.0
+                    if pbc==1.0 || 2.0
                         nxNext = nx%m + 1
                         nyNext = ny%n + 1
 
@@ -434,9 +454,7 @@ module EffectiveField
                             params.defect.jMat[2][nx,ny] * mat[k,nxNext,ny] +
                             params.defect.jMat[3][nx,ny] * mat[k,nx,nyPrev] +
                             params.defect.jMat[4][nx,ny] * mat[k,nx,nyNext]
-
                     else
-
                         if nx > 1
                             Heff[k,nx,ny] = Heff[k,nx,ny] +
                                 params.defect.jMat[1][nx,ny]*mat[k,nx-1,ny]
@@ -495,13 +513,14 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function dmifield!(Heff::Array{Float64,3},
-        mat::Array{Float64,3}, params)
+    function dmifield!(Heff::Array{Float64,3}, mat::Array{Float64,3}, params,
+        edges=[])
 
         p,m,n = size(mat)
 
         dmi = params.mp.a
-        pbc = params.mp.pbc == 1.0
+        pbc = params.mp.pbc
+        if pbc==2.0 leftN, rightN, topN, bottomN = edges end
 
         for nx in 1:m, ny in 1:n
 
@@ -509,18 +528,22 @@ module EffectiveField
                 if pbc==1.0
                     Heff[1,nx,ny] = Heff[1,nx,ny] - dmi*mat[3,nx,n]
                     Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*mat[1,nx,n]
+                elseif pbc==2.0
+                    Heff[1,nx,ny] = Heff[1,nx,ny] - dmi*leftN[3,nx]
+                    Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*leftN[1,nx]
                 end
                 Heff[1,nx,ny] = Heff[1,nx,ny] + dmi*mat[3,nx,ny+1]
                 Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*mat[1,nx,ny+1]
-
             elseif ny==n
                 if pbc==1.0
                     Heff[1,nx,ny] = Heff[1,nx,ny] + dmi*mat[3,nx,1]
                     Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*mat[1,nx,1]
+                elseif pbc==2.0
+                    Heff[1,nx,ny] = Heff[1,nx,ny] + dmi*rightN[3,nx]
+                    Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*rightN[1,nx]
                 end
                 Heff[1,nx,ny] = Heff[1,nx,ny] - dmi*mat[3,nx,ny-1]
                 Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*mat[1,nx,ny-1]
-
             else
                 Heff[1,nx,ny] = Heff[1,nx,ny]+dmi*(mat[3,nx,ny+1]-mat[3,nx,ny-1])
                 Heff[3,nx,ny] = Heff[3,nx,ny]+dmi*(mat[1,nx,ny-1]-mat[1,nx,ny+1])
@@ -530,6 +553,9 @@ module EffectiveField
                 if pbc==1.0
                     Heff[2,nx,ny] = Heff[2,nx,ny] + dmi*mat[3,m,ny]
                     Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*mat[2,m,ny]
+                elseif pbc==2.0
+                    Heff[2,nx,ny] = Heff[2,nx,ny] + dmi*topN[3,ny]
+                    Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*topN[2,ny]
                 end
                 Heff[2,nx,ny] = Heff[2,nx,ny] - dmi*mat[3,nx+1,ny]
                 Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*mat[2,nx+1,ny]
@@ -538,6 +564,9 @@ module EffectiveField
                 if pbc==1.0
                     Heff[2,nx,ny] = Heff[2,nx,ny] - dmi*mat[3,1,ny]
                     Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*mat[2,1,ny]
+                elseif pbc==2.0
+                    Heff[2,nx,ny] = Heff[2,nx,ny] - dmi*bottomN[3,ny]
+                    Heff[3,nx,ny] = Heff[3,nx,ny] + dmi*bottomN[2,ny]
                 end
                 Heff[2,nx,ny] = Heff[2,nx,ny] + dmi*mat[3,nx-1,ny]
                 Heff[3,nx,ny] = Heff[3,nx,ny] - dmi*mat[2,nx-1,ny]
@@ -599,7 +628,7 @@ module EffectiveField
     #
     # out: field = (3, m, n) array containing values of DDI field
     # at every point of mat.
-    function ddifield(mat::Array{Float64,3}, ed::Float64, pbc,
+    function ddifield(mat::Array{Float64,3}, ed::Float64, pbc::Float64,
         phiMatrices::Array{Array{Float64,2},1})
 
         p, m, n = size(mat)
