@@ -14,7 +14,7 @@
 module FieldAlignment
 
     using EffectiveField, Energy, TopologicalCharge, EffectiveSize,
-    LinearAlgebra, Normalize, HDF5
+    LinearAlgebra, Normalize, HDF5, Magnetization
     export runfieldalignment!, modifyspin!
 
     # This function runs modifyspin! until the magnetization settles
@@ -76,11 +76,10 @@ module FieldAlignment
         # Run the random spin relaxation
         for i in 1:maxLoop
 
-            if ed != 0.0
-                ddiField = ddifield(mat, ed, pbc==1.0, v)
+            for i in 1:nrot
+                if ed != 0.0 ddiField = ddifield(mat, ed, pbc, v) end
+                modifyspin!(mat, ddiField, params)
             end
-
-            for i in 1:nrot modifyspin!(mat, ddiField, params) end
             normalizelattice!(mat)
 
             if params.save.totE == 1.0
@@ -123,7 +122,6 @@ module FieldAlignment
             end
 
         end
-
 
         if params.save.totE == 1.0
             h5write(string(reldir,"total-energy_", filesuffix), "Dataset1",
