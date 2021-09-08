@@ -6,7 +6,7 @@ The code in this repository computes the evolution of magnetic moments in a two 
 
 Required libraries:
  - HDF5 (Used to save files in .h5 format.)
- - FFTW (Fourier transform package used in computing dipole-dipole interaction.)
+ - FFTW (Fourier transform package used in computing dipolar interaction.)
  - PaddedViews (Also used in computing dipole-dipole interaction.)
  - LinearAlgebra (Used for vector operations.)
  - Distributed (To parallelize.)
@@ -17,11 +17,11 @@ This code was written to study the behavior of skyrmions, topologically protecte
 
 ## Usage
 
-To run the program, execute ''julia runScript.jl'' in terminal. A series of prompts requesting input for material parameters, system size, and numerical options will follow.
+To run the program, modify values in `01-scripts/UserInputs.jl`, navigate to the `01-scripts/` folder in terminal, and execute `julia Run.jl`
 
 ## Data
 
-When the script is executed, results are saved to the directory "/data/" by default. All data is stored in HDF5 format.
+When the script is executed, results are saved to the directory `/02-data/.` All data is stored in HDF5 format.
 
 ## Works using this
 
