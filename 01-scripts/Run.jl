@@ -52,7 +52,7 @@ testParams = Parameters.params(mp, cp, ic, pp, dp, cc, sp, rp)
 
 if testParams.cp.parallel == 1
 
-  addprocs(testParams.llg.numCores)
+  addprocs(testParams.cp.numCores)
   println("Initializing parallel cores. Number of processors = ", nprocs(),
         ", number of workers = ", nworkers())
 
