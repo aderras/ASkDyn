@@ -67,8 +67,8 @@ module SpinDynamics
 
         # If temperature is nonzero, divide tFree by 2 so that we apply noise
         # rotation halfway through (see computLL!() below)
-        if p.cp.T !=0.0 && relaxation==false
-            p.cp.nSteps = round(Int64,p.cp.nSteps/2)
+        if params.cp.temp !=0.0 && relaxation==false
+            params.cp.nSteps = round(Int64,p.cp.nSteps/2)
         end
 
         # Make arrays to store data based on what user requested
@@ -174,7 +174,7 @@ module SpinDynamics
 
         # This is the pulse-noise algorithm
         if params.cp.temp == 0.0
-            @time rk4!(s, RHS!, params, relaxation)
+            rk4!(s, RHS!, params, relaxation)
             normalizelattice!(s)
         else
             rk4!(s, RHS!, params, relaxation)
