@@ -89,15 +89,15 @@ module UserInputs
         # If you would like to import pre-computed relaxation data and run
         # dynamics, change the filename here
         function relaxationName(p)
-            return string("final-spin-field_relaxation_T=",p.cp.temp,
+            return string("S_FINAL_RELAXATION_T=",p.cp.temp,
             "_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",round(p.mp.dz,digits=5),
             "_ED=",round(p.mp.ed,digits=5),"_ICX=",p.ic.px,".h5")
         end
 
         function outputSuffix(p)
-            string("_T=",p.cp.temp,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
-            round(p.mp.dz,digits=5),"_ED=",round(p.mp.ed,digits=5),"_ICX=",
-            p.ic.px,".h5")
+            return string("_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",p.mp.nz,"_J=",p.mp.j,
+            "_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",round(p.mp.dz,digits=5),
+            "_BETA=",p.mp.ed,".h5")
         end
 
         exch = "EXCHANGE"
@@ -112,7 +112,7 @@ module UserInputs
         charge = "CHARGE"
         finalField = "S_FINAL"
 
-        allFilenames = [exch,zee,dmi,pma,ddi,magn,size,loc,energy,charge,finalField]
+        allFilenames = [energy,exch,zee,dmi,pma,ddi,magn,size,charge,loc,finalField]
 
     end
 
