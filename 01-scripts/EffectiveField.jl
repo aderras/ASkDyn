@@ -33,7 +33,8 @@ module EffectiveField
     import Dipolar, InitialCondition
     import DefectFunctions
     export effectivefieldelem!, effectivefield, ddifield, exchangefield!,
-    zeemanfield!, pmafield!, dmifield!
+    zeemanfield!, pmafield!, dmifield!, exchangefieldelemB!
+    using StaticArrays
 
     # effectivefieldelem! modifies a (3, 1) array to equal the effective field
     # at some point nx,ny. Prealocating this way improves speed.
@@ -229,14 +230,14 @@ module EffectiveField
         Heff = zeros(3, m, n)
 
         # Exchange effective field
-        exchangefield!(Heff, mat, params)
-        zeemanfield!(Heff, mat, params)
+        exchangefield!(Heff, mat, j, pbc, params.defect)
+        zeemanfield!(Heff, mat, h)
 
         if a != 0.0
-            dmifield!(Heff, mat, params)
+            dmifield!(Heff, mat, a, pbc)
         end
         if dz != 0.0
-            pmafield!(Heff, mat, params)
+            pmafield!(Heff, mat, dz)
         end
 
         if ed != 0.0
@@ -248,15 +249,10 @@ module EffectiveField
 
         # If there is a pinning field, add the field at the point where the
         # skyrmion was initially created.
-        hPin = params.pin.hPin
-        px = params.ic.px
-        py = params.ic.py
-
-        if hPin != 0.0
-            # Was testing whether pinning several sites affected results
-            # for nx = px-1:px+1, ny = py-1:py+1
-            #      Heff[3,nx,ny] = Heff[3,nx,ny] + hPin
-            # end
+        if params.pin.hPin != 0.0
+            hPin = params.pin.hPin
+            px = params.ic.px
+            py = params.ic.py
             Heff[3,px,py] = Heff[3,px,py] + hPin
         end
 
@@ -272,18 +268,16 @@ module EffectiveField
     #
     # out: nothing
     function exchangefield!(Heff::Array{Float64,3},
-        mat::Array{Float64,3}, params)
+        mat::Array{Float64,3}, J, pbc, defectParams = [])
 
         p, m, n = size(mat)
 
-        if params.defect.t == 2
-            exchangefield_defect!(Heff, mat, params)
-            return
+        if defectParams != []
+            if defectParams.t == 2
+                exchangefield_defect!(Heff, mat, J, pbc, defectParams)
+                return
+            end
         end
-
-        J = params.mp.j
-
-        pbc = params.mp.pbc
 
         for j in 1:n, i in 1:m-1, k in 1:p
             Heff[k,i,j] += mat[k,i+1,j]
@@ -334,12 +328,9 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function dmifield!(Heff::Array{Float64,3}, mat::Array{Float64,3}, params)
+    function dmifield!(Heff::Array{Float64,3}, mat::Array{Float64,3}, dmi, pbc)
 
         p,m,n = size(mat)
-
-        dmi = params.mp.a
-        pbc = params.mp.pbc
 
         for nx in 1:m, ny in 1:n
 
@@ -394,15 +385,12 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function zeemanfield!(Heff::Array{Float64,3},
-        mat::Array{Float64,3}, params)
+    function zeemanfield!(Heff, mat, h)
 
         p, m, n = size(mat)
 
-        H = params.mp.h
-
-        for i in 1:m, j in 1:n, p in 3
-            Heff[p,i,j] +=  H
+        for i in 1:m, j in 1:n
+            Heff[3,i,j] += h
         end
 
     end
@@ -415,11 +403,9 @@ module EffectiveField
     #
     # out: nothing
     function pmafield!(Heff::Array{Float64,3},
-        mat::Array{Float64,3}, params)
+        mat::Array{Float64,3}, Dz)
 
         p, m, n = size(mat)
-
-        Dz = params.mp.dz
 
         for i in 1:m, j in 1:n, p in 3
             Heff[p,i,j] = Heff[p,i,j] + Dz * mat[p, i, j]

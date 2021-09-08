@@ -6,7 +6,8 @@ using InitialCondition, EffectiveField, Energy, EffectiveSize, Dipolar
 
 # Only build the following matrices if the dipolar interaction is nonzero
 if UserInputs.Material.ed!=0.0
-    v = vdmatrices(Int(arr[6]),Int(arr[7]),Int(arr[8]),1.0==arr[9])
+    v = vdmatrices(UserInputs.Material.nx, UserInputs.Material.ny,
+        UserInputs.Material.nz, 1.0==UserInputs.Material.pbc)
 else
     v = [[0.0 0.0; 0.0 0.0],[0.0 0.0; 0.0 0.0],[0.0 0.0; 0.0 0.0],
         [0.0 0.0; 0.0 0.0]]
