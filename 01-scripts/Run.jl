@@ -25,7 +25,7 @@ cp = Parameters.compParams(UserInputs.Computation.tMax, UserInputs.Computation.d
     UserInputs.Computation.parallel, UserInputs.Computation.numCores,
     UserInputs.Computation.runRelaxation, UserInputs.Computation.sMax,
     UserInputs.Computation.faConst,UserInputs.Computation.nRot,
-    UserInputs.Computation.faTol)
+    UserInputs.Computation.faTol, UserInputs.Computation.rChirality)
 
 ic = Parameters.icParams(UserInputs.InitialCondition.type,
     UserInputs.InitialCondition.r, UserInputs.InitialCondition.chirality,
@@ -45,7 +45,8 @@ sp = Parameters.saveChoices(UserInputs.SaveChoices.totalE,
     UserInputs.SaveChoices.dmiE, UserInputs.SaveChoices.pmaE,
     UserInputs.SaveChoices.ddiE, UserInputs.SaveChoices.magn,
     UserInputs.SaveChoices.size, UserInputs.SaveChoices.charge,
-    UserInputs.SaveChoices.loc, UserInputs.SaveChoices.fieldDuring)
+    UserInputs.SaveChoices.loc, UserInputs.SaveChoices.fieldDuring,
+    UserInputs.SaveChoices.chirality)
 
 rp = Parameters.paramRanges(UserInputs.Ranges.rRange)
 

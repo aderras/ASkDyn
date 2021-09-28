@@ -2,7 +2,8 @@
 push!(LOAD_PATH, pwd())
 include("Parameters.jl")
 using Distributed, SpinDynamics, BenchmarkTools, UserInputs
-using InitialCondition, EffectiveField, Energy, EffectiveSize, Dipolar
+using InitialCondition, EffectiveField, Energy, EffectiveSize, Dipolar,
+Chirality
 
 # Only build the following matrices if the dipolar interaction is nonzero
 if UserInputs.Material.ed!=0.0
@@ -25,7 +26,7 @@ cp = Parameters.compParams(UserInputs.Computation.tMax, UserInputs.Computation.d
     UserInputs.Computation.parallel, UserInputs.Computation.numCores,
     UserInputs.Computation.runRelaxation, UserInputs.Computation.sMax,
     UserInputs.Computation.faConst,UserInputs.Computation.nRot,
-    UserInputs.Computation.faTol)
+    UserInputs.Computation.faTol, UserInputs.Computation.rChirality)
 
 ic = Parameters.icParams(UserInputs.InitialCondition.type,
     UserInputs.InitialCondition.r, UserInputs.InitialCondition.chirality,
@@ -45,7 +46,8 @@ sp = Parameters.saveChoices(UserInputs.SaveChoices.totalE,
     UserInputs.SaveChoices.dmiE, UserInputs.SaveChoices.pmaE,
     UserInputs.SaveChoices.ddiE, UserInputs.SaveChoices.magn,
     UserInputs.SaveChoices.size, UserInputs.SaveChoices.charge,
-    UserInputs.SaveChoices.loc, UserInputs.SaveChoices.fieldDuring)
+    UserInputs.SaveChoices.loc, UserInputs.SaveChoices.fieldDuring,
+    UserInputs.SaveChoices.chirality)
 
 rp = Parameters.paramRanges(UserInputs.Ranges.rRange)
 
@@ -54,50 +56,53 @@ testParams = Parameters.params(mp, cp, ic, pp, dp, cc, sp, rp)#, hp)
 println("Build skyrmion")
 s0 = buildinitial(testParams.ic, testParams.mp)
 
-print("Get material parameter fields")
-@btime [getfield(testParams.mp, x)
-    for x in fieldnames(typeof(testParams.mp))]
-j,h,a,dz,ed,nx,ny,nz,pbc,vd = [getfield(testParams.mp, x)
-    for x in fieldnames(typeof(testParams.mp))]
+print("Compute chirality")
+@btime Chirality.computeGamma(s0,testParams)
 
-println("\nNx=Ny=", nx, " lattice")
-
-println("\nCompute energy")
-print("Exchange")
-@btime exchange_energy(s0, j, pbc)
-
-print("Zeeman")
-@btime zeeman_energy(s0, h)
-
-print("DMI")
-@btime dmi_energy(s0, a, pbc)
-
-print("PMA")
-@btime pma_energy(s0, dz)
-
-if ed!=0.0
-    print("DDI")
-    @btime ddi_energy(s0, ed, pbc, vd)
-end
-
-Heff = zeros(3,nx,ny)
-println("\nCompute effective field")
-print("Exchange")
-@btime exchangefield!(Heff, s0, j, pbc, testParams.defect)
-
-print("Zeeman")
-@btime zeemanfield!(Heff, s0, h)
-
-print("DMI")
-@btime dmifield!(Heff, s0, a, pbc)
-
-print("PMA")
-@btime pmafield!(Heff, s0, dz)
-
-if ed!=0.0
-    print("DDI")
-    @btime ddifield(s0, ed, pbc, vd)
-end
-
-print("Full effective field")
-@btime effectivefield(s0, testParams)
+# print("Get material parameter fields")
+# @btime [getfield(testParams.mp, x)
+#     for x in fieldnames(typeof(testParams.mp))]
+# j,h,a,dz,ed,nx,ny,nz,pbc,vd = [getfield(testParams.mp, x)
+#     for x in fieldnames(typeof(testParams.mp))]
+#
+# println("\nNx=Ny=", nx, " lattice")
+#
+# println("\nCompute energy")
+# print("Exchange")
+# @btime exchange_energy(s0, j, pbc)
+#
+# print("Zeeman")
+# @btime zeeman_energy(s0, h)
+#
+# print("DMI")
+# @btime dmi_energy(s0, a, pbc)
+#
+# print("PMA")
+# @btime pma_energy(s0, dz)
+#
+# if ed!=0.0
+#     print("DDI")
+#     @btime ddi_energy(s0, ed, pbc, vd)
+# end
+#
+# Heff = zeros(3,nx,ny)
+# println("\nCompute effective field")
+# print("Exchange")
+# @btime exchangefield!(Heff, s0, j, pbc, testParams.defect)
+#
+# print("Zeeman")
+# @btime zeemanfield!(Heff, s0, h)
+#
+# print("DMI")
+# @btime dmifield!(Heff, s0, a, pbc)
+#
+# print("PMA")
+# @btime pmafield!(Heff, s0, dz)
+#
+# if ed!=0.0
+#     print("DDI")
+#     @btime ddifield(s0, ed, pbc, vd)
+# end
+#
+# print("Full effective field")
+# @btime effectivefield(s0, testParams)

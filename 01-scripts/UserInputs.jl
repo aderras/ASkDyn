@@ -6,14 +6,14 @@ module UserInputs
         a = 0.0
         ed = 0.0
         dz = 4*pi*ed
-        nx = ny = 64
-        nz = 10
+        nx = ny = 512
+        nz = 1
         pbc = 0.0 # 0.0=nothing, 1.0=pbc, 2.0=linear extrapolation
     end
 
     module Computation
         # Computation paramters
-        tMax = 5
+        tMax = 1
         dt = 0.2
         nSteps = 10
         tol = 10^-5
@@ -29,12 +29,14 @@ module UserInputs
         faConst = 0.3
         nRot = 10
         faTol = 10^-4
+
+        rChirality = 100
     end
 
     module InitialCondition
         import UserInputs.Material
         type = "skyrmion"
-        r = 5
+        r = 12
         chirality = pi/2
         icx = Material.nx/2
         icy = Material.ny/2
@@ -59,7 +61,7 @@ module UserInputs
     end
 
     module Ranges
-        rRange=[]
+        rRange=[8.0:12.0;]
     end
 
     module SaveChoices
@@ -74,12 +76,15 @@ module UserInputs
         charge = 1
         loc = 0
         fieldDuring = 0
+        chirality = 1
     end
 
     # All the paths for importing and exporting files
     module Paths
         relaxation = string(dirname(pwd()),"/02-data/relaxation/")
         output = string(dirname(pwd()),"/02-data/out/")
+
+        starting = string(dirname(pwd()),"/02-data/store/")
     end
 
     module Filenames
@@ -88,16 +93,13 @@ module UserInputs
 
         # If you would like to import pre-computed relaxation data and run
         # dynamics, change the filename here
-        function relaxationName(p)
-            return string("S_FINAL_RELAXATION_T=",p.cp.temp,
-            "_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",round(p.mp.dz,digits=5),
-            "_ED=",round(p.mp.ed,digits=5),"_ICX=",p.ic.px,".h5")
-        end
-
         function outputSuffix(p)
             return string("_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",p.mp.nz,"_J=",p.mp.j,
             "_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",round(p.mp.dz,digits=5),
-            "_BETA=",p.mp.ed,".h5")
+            "_BETA=",p.mp.ed,"_R=",p.ic.r,".h5")
+        end
+        function inputName(p)
+            return string("S_1.0",outputSuffix(p))
         end
 
         exch = "EXCHANGE"
@@ -111,8 +113,10 @@ module UserInputs
         energy = "EN"
         charge = "CHARGE"
         finalField = "S_FINAL"
+        chirality = "GAMMA"
 
-        allFilenames = [energy,exch,zee,dmi,pma,ddi,magn,size,charge,loc,finalField]
+        # The names in this list have to match saveChoices options
+        allFilenames = [energy,exch,zee,dmi,pma,ddi,magn,size,charge,loc,finalField,chirality]
 
     end
 

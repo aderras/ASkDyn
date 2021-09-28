@@ -3,7 +3,7 @@ module SpinDynamics
 
     using HDF5, Energy, TopologicalCharge, LLequation, Magnetization, RungeKutta,
     LLequation, Normalize, NoiseRotation, Dates, EffectiveSize,
-    InitialCondition, Distributed, FieldAlignment, UserInputs
+    InitialCondition, Distributed, FieldAlignment, UserInputs, Chirality
 
     using BenchmarkTools
 
@@ -26,12 +26,12 @@ module SpinDynamics
             runfieldalignment!(s0, p)
 
         else
-            # Check for relaxation data
-            relaxDir = UserInputs.Paths.output
-            filename = string(relaxDir, UserInputs.Filenames.relaxationName(p))
+            # Check for starting data
+            inputDir = UserInputs.Paths.starting
+            filename = string(inputDir, UserInputs.Filenames.inputName(p))
 
             if isfile(filename)
-                println("Importing relaxation file ", filename)
+                println("Importing file ", filename)
                 s0 = h5read(filename,"Dataset1")
             else
                 println("No relaxation data with name ", filename, " found. ",
@@ -41,8 +41,10 @@ module SpinDynamics
         end
 
         # Then dynamics
-        rundynamics!(s0, p)
+        # rundynamics!(s0, p)
         println("Completed eval on worker ", myid())
+
+        println("R = ",p.ic.r)
 
     end
 
@@ -74,7 +76,7 @@ module SpinDynamics
         # Make arrays to store data based on what user requested
         # Can't think of a smarter way to do this....
         allArrays = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],
-            [0.0],[0.0]]
+            [0.0],[0.0],[0.0]]
 
         count = 1
         for x in fieldnames(typeof(params.save))
@@ -131,6 +133,10 @@ module SpinDynamics
             if params.save.spinField == 1.0
                 h5overwrite(string(reldir,"S_",i*p.cp.dt,"_", filesuffix),mat)
             end
+            if params.save.chir == 1.0
+                allArrays[12][i] = Chirality.computeGamma(mat, params)
+            end
+
 
             # Print if debugging
             #println("i = ", i, ", Q = ", qArray[i], ", E = ", enArray[i])

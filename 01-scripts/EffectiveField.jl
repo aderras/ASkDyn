@@ -34,7 +34,6 @@ module EffectiveField
     import DefectFunctions
     export effectivefieldelem!, effectivefield, ddifield, exchangefield!,
     zeemanfield!, pmafield!, dmifield!, exchangefieldelemB!
-    using StaticArrays
 
     # effectivefieldelem! modifies a (3, 1) array to equal the effective field
     # at some point nx,ny. Prealocating this way improves speed.

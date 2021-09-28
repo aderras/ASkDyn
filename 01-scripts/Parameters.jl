@@ -60,7 +60,7 @@ module Parameters
         # ny
         # nz
         # pbc
-        rinit
+        r
         # px  # current in y
         # py # initial position of skyrmion
     end
@@ -81,6 +81,8 @@ module Parameters
         faconst::Float64  # Field alignment param
         nRot::Float64     # Number of rotations to make
         faTol::Float64    # Tolerance for convergence
+
+        rChirality::Int
     end
 
     # Initial condition parameters
@@ -130,6 +132,7 @@ module Parameters
         qCharge::Int    # Topological charge
         location::Int   # Position (skyrmion)
         spinField::Int  # Spin field (The whole matrix. Data intensive.)
+        chir::Int       # Chirality
     end
 
     # All parameters are stored in this struct.
@@ -146,106 +149,6 @@ module Parameters
 
     end
 
-    ############################################################################
-    # Begin functions used in building the parameter struct
-
-    # getUserInput asks for user input and tests whether it's of the right type
-    #
-    # in: T = type of input to request, msg = message to send to user
-    # out: Value input of type T
-    function getUserInput(T=String, msg="")
-
-        print("$msg")
-
-        # If requesting a string, just return it.
-        if T == String
-            return readline()
-
-        # If requesting something else, try to parse the answer. If there's a
-        # problem, try again.
-        else
-            try
-                return parse(T, readline())
-            catch
-                println("I could not interpret your answer. Please try again. ")
-                getUserInput(T, msg)
-            end
-        end
-    end
-
-
-    # Request a series of parameters with the following function.
-    #
-    # in: paramType = type of parameter struct you will be constructing,
-    # paramList = array of strings containing parameters to request,
-    # defaultList = default values ot paramType. Types of defaultList must
-    # reflect the type required in the parameter struct
-    # out: struct paramType with either user inputs or default values
-    function getComputationParams(paramType, paramList::Array{String,1},
-        defaultList)
-
-        ans = getUserInput(String, string("\nEnter parameters ",
-            [i for i in paramList], "? y/n "))
-
-        # If user wants to enter parameters, get them
-        if ans == "y"
-            paramVals = zeros(length(paramList))
-
-            for i in 1:length(paramList)
-
-                paramVals[i] = getUserInput(typeof(defaultList[i]),
-                    string(paramList[i], " = "))
-
-            end
-            return paramType(paramVals)
-
-        # Otherwise set default values
-        else
-
-            println(string("Setting default values ", [j for j in defaultList]))
-            return paramType(defaultList)
-
-        end
-
-    end
-
-    # In order to set ranges for parameters, have to modify the rangeParams
-    # struct. Do that with the following function.
-    function modifyMatParam!(mat, val, num)
-
-        if num == 1
-            mat.j = val
-        elseif num == 2
-            mat.h = val
-        elseif num == 3
-            mat.a = val
-        elseif num == 4
-            mat.dz = val
-        elseif num == 5
-            mat.ed = val
-        elseif num == 6
-            mat.nx = val
-        elseif num == 7
-            mat.ny = val
-        elseif num == 8
-            mat.nz = val
-        elseif num == 9
-            mat.pbc = val
-        elseif num == 10
-            mat.r = val
-        elseif num == 11
-            mat.px = val
-        elseif num == 12
-            mat.py = val
-        else
-            println(string("Error modifying material parameter struct. No ",
-                num, "th value found. Quitting."))
-            quit()
-        end
-
-    end
-
-
     # getTestParams creates a params struct to use for testing, so that the user
     # does not need to navigate through user input every time. This function is
     # also used to create a params struct of the same structure that is used in
@@ -254,11 +157,11 @@ module Parameters
     function buildparam()
 
         myMatParams = materialParams(0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, [])
-        myCompParams = compParams(0, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0, 0,0.0,0,0.0)
+        myCompParams = compParams(0, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0, 0,0.0,0,0.0,0)
         myICParams = icParams("", 0, 0.0, 0, 0)
         myPinningParams = pinningParams(0.0)
         myDefectParams = defectParams(0, 0.0, 0.0, 0, 0, [])
-        mySaveChoices = saveChoices(0,0,0,0,0,0,0,0,0,0,0)
+        mySaveChoices = saveChoices(0,0,0,0,0,0,0,0,0,0,0,0)
         myParamRanges = paramRanges([])#, [], [], [], [], [], [], [], [], [], [], [])
         myCurrentChoices = currentParams(0.0, 0.0, 100)
 
@@ -388,11 +291,8 @@ module Parameters
 
             # For all the fields, copy values from source to destination
             for f in fields
-
                 setfield!(dest, f, getfield(source, f))
-
             end
-
         end
     end
 
