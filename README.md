@@ -10,6 +10,7 @@ Required libraries:
  - PaddedViews (Also used in computing dipole-dipole interaction.)
  - LinearAlgebra (Used for vector operations.)
  - Distributed (To parallelize.)
+ - BenchmarkTools (For testing.)
 
 ## Background
 
