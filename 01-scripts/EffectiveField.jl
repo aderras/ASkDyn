@@ -293,7 +293,7 @@ module EffectiveField
 
         extrap0 = [0.0,0.0,0.0]
         extrap1 = [2.0,-1.0,0.0]
-        extrap2 = [3.0,-3.0,0.0]
+        extrap2 = [3.0,-3.0,1.0]
 
         extrap = [extrap0, extrap1, extrap2]
 
