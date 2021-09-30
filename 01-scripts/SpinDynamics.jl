@@ -33,6 +33,7 @@ module SpinDynamics
             if isfile(filename)
                 println("Importing file ", filename)
                 s0 = h5read(filename,"Dataset1")
+                println(size(s0))
             else
                 println("No relaxation data with name ", filename, " found. ",
                     "Continuing evaluation without relaxation.")
@@ -41,10 +42,8 @@ module SpinDynamics
         end
 
         # Then dynamics
-        # rundynamics!(s0, p)
+        rundynamics!(s0, p)
         println("Completed eval on worker ", myid())
-
-        println("R = ",p.ic.r)
 
     end
 
