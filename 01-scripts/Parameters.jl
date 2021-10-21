@@ -48,21 +48,11 @@ module Parameters
 
     # If user would like to run the script for a range of values, store
     # those values in the following struct. Elements of this struct are
-    # lists of the same physical values as labeled in "materialParams"
+    # lists of the same physical values as labeled in any of the other
+    # stucts in this file. The name here must exactly match the name of
+    # the variable in the original struct.
     mutable struct paramRanges
-
-        # j
-        # h
-        # a
-        # dz
-        # ed
-        # nx
-        # ny
-        # nz
-        # pbc
-        r
-        # px  # current in y
-        # py # initial position of skyrmion
+        pbc
     end
 
     mutable struct compParams
@@ -145,7 +135,6 @@ module Parameters
         defect      # defectParams
         current     # current
         save        # saveChoices
-        range       # paramRanges
 
     end
 
@@ -162,77 +151,16 @@ module Parameters
         myPinningParams = pinningParams(0.0)
         myDefectParams = defectParams(0, 0.0, 0.0, 0, 0, [])
         mySaveChoices = saveChoices(0,0,0,0,0,0,0,0,0,0,0,0)
-        myParamRanges = paramRanges([])#, [], [], [], [], [], [], [], [], [], [], [])
+        # myParamRanges = paramRanges([],[])
         myCurrentChoices = currentParams(0.0, 0.0, 100)
 
         # Now put all of the user choices into one struct
         allParams = params(myMatParams, myCompParams, myICParams,
             myPinningParams,myDefectParams, myCurrentChoices,
-            mySaveChoices, myParamRanges)
+            mySaveChoices)#), myParamRanges)
 
         return allParams
 
-    end
-
-
-    # Builds a list of all the compuatation parameters requested by the user. It
-    # does this by reursively sesarching through the user requests to make
-    # combinations of all possible parameters. Stores all user requests in the
-    # input array, allParams
-    function getparamlist!(par, allParams)
-
-        # Get all the ranges requested. These are a stored in a struct.
-        rangeParams = par.range
-
-        # Get field names of the range struct
-        fields = fieldnames(typeof(rangeParams))
-
-        # Get the length of all the range params to see if user selected any
-        # ranges
-        lenRangeParams = [length(getfield(rangeParams, x)) for x in fields]
-
-        if sum(lenRangeParams) > 0
-
-            # Find the first nonzero range
-            rangePos = findall(x->x != 0, lenRangeParams)[1]
-
-            currentRange = getfield(rangeParams, fields[rangePos])
-
-            # Make a copy of the params struct. Call copystruct! to deep copy
-            copyParams = buildparam()
-            copystruct!(par, copyParams)
-
-            # For all the values in the range, set the field to that value and
-            # call run comp again to recurse through the rest of the ranges.
-            for i in range(1, stop=length(currentRange))
-
-                setfield_nestedstruct!(copyParams, fields[rangePos],
-                    currentRange[i])
-
-                # Set the field range we're currently on to empty in the
-                # copied struct
-                setfield!(copyParams.range, fields[rangePos], [])
-
-                # Then recurseRun again, until all of the ranges have
-                # been cycled through.
-                getparamlist!(copyParams, allParams)
-
-            end
-
-        # If there are no ranges, then store the params
-        else
-
-            # Need to copy the struct first so that it won't pass by ref. To copy
-            # first create a params object of the same structure as our input.
-            # (We need it to be filled with values.) Then call copystruct! to
-            # put all of par into copyParams. Then add copyParams to the list of
-            # params.
-            copyParams = buildparam()
-            copystruct!(par, copyParams)
-
-            push!(allParams, copyParams)
-
-        end
     end
 
     # Given a field and value, this searches the nested struct for approapriate
@@ -244,12 +172,10 @@ module Parameters
         # If there are no fields, you reached the end of the nested structure
         if length(names) == 0
             return
-
         # If the field is in this list, then set the value to what you want
         elseif fieldname in names
             setfield!(nestedStruct, fieldname, value)
             return
-
         # If the field is not in this level, it means there is another level to
         # recurse through.
         else
@@ -258,7 +184,6 @@ module Parameters
                     value)
             end
         end
-
     end
 
     # Deep copies struct of structs. Works recursively. Source and dest are
@@ -266,32 +191,60 @@ module Parameters
     #
     # There is probably a native Julia way to do this. Couldn't find it.
     function copystruct!(source, dest)
-
         fields = fieldnames(typeof(source))
 
         # If there are no fields, you reached the end of the nested structure
         if length(fields) == 0
-
             return
-
         # If the parent module of this field is not Core, there is another
         # level of nested structs to dig through. Call copystruct! again.
         elseif parentmodule(typeof(getfield(source, fields[1]))) != Core
-
             # For all the fields, recursively call copyStruct
             for f in fields
-
                 copystruct!(getfield(source, f), getfield(dest, f))
-
             end
 
         # If the parent module of this level is Core, you've reached the values
         # to copy, so do it.
         else
-
             # For all the fields, copy values from source to destination
             for f in fields
                 setfield!(dest, f, getfield(source, f))
+            end
+        end
+    end
+
+    # Set field of a nested struct given multiple assignments
+    function setfield_multi!(paramStruct, fields, values)
+        for fv in collect(zip(fields,values))
+            setfield_nestedstruct!(paramStruct, fv[1], fv[2])
+        end
+    end
+
+    # Builds a list of all the compuatation parameters requested by the user. It
+    # does this by reursively sesarching through the user requests to make
+    # combinations of all possible parameters. Stores all user requests in the
+    # input array, paramList
+    function getparamlist!(allParams, paramList, rangeParams, iters=[],
+        iCurr=[], count=1)
+
+        # Get field names of the range struct
+        fields = fieldnames(typeof(rangeParams))
+        vals=[getfield(rangeParams,f) for f in fields]
+        iters=[1:length(vec) for vec in vals]
+
+        for i in iters[count]
+            if count==1 iCurr=[] else iCurr=iCurr[1:(count-1)] end
+            push!(iCurr, i)
+
+            if count==length(iters)
+                values=[vals[k][iCurr[k]] for k in 1:length(iCurr)]
+                newParamElem = buildparam()
+                copystruct!(allParams, newParamElem)
+                setfield_multi!(newParamElem, fields, values)
+                push!(paramList, newParamElem)
+            else
+                getparamlist!(allParams, paramList, rangeParams, iters, iCurr, count+1)
             end
         end
     end
