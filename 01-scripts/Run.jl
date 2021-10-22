@@ -48,9 +48,9 @@ sp = Parameters.saveChoices(UserInputs.SaveChoices.totalE,
     UserInputs.SaveChoices.loc, UserInputs.SaveChoices.fieldDuring,
     UserInputs.SaveChoices.chirality)
 
-rp = Parameters.paramRanges(UserInputs.Ranges.rRange)
+rp = Parameters.paramRanges(UserInputs.Ranges.pbc)
 
-testParams = Parameters.params(mp, cp, ic, pp, dp, cc, sp, rp)
+testParams = Parameters.params(mp, cp, ic, pp, dp, cc, sp)#, rp)
 
 if testParams.cp.parallel == 1
 
@@ -63,11 +63,11 @@ if testParams.cp.parallel == 1
 
         using Parameters, SpinDynamics, Distributed
 
-        function parallelize(testParams)
+        function parallelize(testParams, rp)
 
           # All params is a list of all combinations of the requested inputs
           allParams = []
-          Parameters.getparamlist!(testParams, allParams)
+          Parameters.getparamlist!(testParams, allParams, rp)
 
           pmap(launchcomputation, allParams)
 
@@ -76,13 +76,13 @@ if testParams.cp.parallel == 1
     end
 
   using .Test
-  Test.parallelize(testParams)
+  Test.parallelize(testParams,rp)
 
 else
 
-  allParams = []
-  Parameters.getparamlist!(testParams, allParams)
+allParams = []
+Parameters.getparamlist!(testParams, allParams, rp)
 
-  map(launchcomputation, allParams)
+map(launchcomputation, allParams)
 
 end

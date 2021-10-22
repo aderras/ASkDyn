@@ -258,6 +258,12 @@ module EffectiveField
         return Heff
     end
 
+    function dot(vec1,vec2)
+        sum=0.0
+        for i in 1:length(vec1) sum+=vec1[i]*vec2[i] end
+        return sum
+    end
+
     # Compute the exchange field of the entire spin array, mat. Nearest neighbor
     # interactions are considered.
     #
@@ -291,11 +297,21 @@ module EffectiveField
 		    Heff[k,i,j] += mat[k,i,j-1]
 	    end
 
-        extrap0 = [0.0,0.0,0.0]
-        extrap1 = [2.0,-1.0,0.0]
+        extrap0 = [0.0] # Need this as a placeholder
+
+        # First order backward euler, linear and quadratic interp
+        extrap1 = [2.0,-1.0]
         extrap2 = [3.0,-3.0,1.0]
 
-        extrap = [extrap0, extrap1, extrap2]
+        # 4th order backward difference, linear and quadratic interp
+        extrap3 = [37.0, -48.0, 36.0, -16.0, 3.0]/12.0
+        extrap4 = [41.0, -101.0, 125.0, -86.0, 32.0, -5.0]/6.0
+
+        # 4th order central difference, linear and quadratic interp
+        extrap5 = [-0.25, 2.0, 1.0, -2.0, 0.25]
+        extrap6 = [-2.75, 14.0, -21.5, 10.0, -0.5]
+
+        extrap = [extrap0, extrap1, extrap2, extrap3, extrap4, extrap5, extrap6]
 
         if pbc!=0.0 bc = extrap[round(Int64,pbc)] end
 
@@ -309,13 +325,14 @@ module EffectiveField
     		    Heff[k,i,n] += mat[k,i,1]
     		end
     	elseif pbc>1.0
+            ll = length(bc)
             for j in 1:n, k in 1:p
-                Heff[k,1,j] += bc[1]*mat[k,1,j] + bc[2]*mat[k,2,j] + bc[3]*mat[k,3,j]
-                Heff[k,m,j] += bc[1]*mat[k,m,j] + bc[2]*mat[k,m-1,j] + bc[3]*mat[k,m-2,j]
+                Heff[k,1,j] += dot(bc, mat[k,1:ll,j])
+                Heff[k,m,j] += dot(reverse(bc), mat[k,m-ll+1:m,j])
             end
             for i in 1:m, k in 1:p
-                Heff[k,i,1] += bc[1]*mat[k,i,1] + bc[2]*mat[k,i,2] + bc[3]*mat[k,i,3]
-                Heff[k,i,n] += bc[1]*mat[k,i,n] + bc[2]*mat[k,i,n-1] + bc[3]*mat[k,i,n-2]
+                Heff[k,i,1] += dot(bc, mat[k,i,1:ll])
+                Heff[k,i,n] += dot(reverse(bc), mat[k,i,n-ll+1:n])
             end
         end
     end

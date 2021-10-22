@@ -27,13 +27,15 @@ module SpinDynamics
 
         else
             # Check for starting data
-            inputDir = UserInputs.Paths.starting
+            inputDir = UserInputs.Paths.initialConds
             filename = string(inputDir, UserInputs.Filenames.inputName(p))
 
             if isfile(filename)
                 println("Importing file ", filename)
                 s0 = h5read(filename,"Dataset1")
-                println(size(s0))
+                # If importing initial conditions from MM, have to reverse dims
+                if size(s0)[1]!=3 s0=permutedims(s0,[3,2,1]) end
+                println("Dimensions of imported data: ", size(s0))
             else
                 println("No relaxation data with name ", filename, " found. ",
                     "Continuing evaluation without relaxation.")

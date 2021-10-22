@@ -6,9 +6,14 @@ module UserInputs
         a = 0.0
         ed = 0.0
         dz = 4*pi*ed
-        nx = ny = 512
+        nx = 512
+        ny = nx
         nz = 1
-        pbc = 0.0 # 0.0=nothing, 1.0=pbc, 2.0=linear extrapolation
+        pbc = 5.0 # OPTIONS: Float between 1.0 and 6.0,
+                  # 0.0=nothing, 1.0=pbc,
+                  # 2.0/3.0 = 1st order backward euler, linear/quadratic interp
+                  # 4.0/5.0 = 4th order backward euler, linear/quadratic interp
+                  # 6.0/7.0 = 4th central difference, linear/quadratic interp
     end
 
     module Computation
@@ -17,7 +22,7 @@ module UserInputs
         dt = 0.2
         nSteps = 10
         tol = 10^-5
-        damping = 0.1
+        damping = 0.0
         T = 0.0
         parallel = 0
         numCores = 1
@@ -25,18 +30,18 @@ module UserInputs
                             # condition and run LLG, 1=LLG with damping set to
                             # 1.0, 2=FA relaxation
 
-        sMax = 1000
+        sMax = 1
         faConst = 0.3
         nRot = 10
         faTol = 10^-4
 
-        rChirality = 100
+        rChirality = 20    #MAKE SURE THIS MAKES SENSE
     end
 
     module InitialCondition
         import UserInputs.Material
         type = "skyrmion"
-        r = 12
+        r = 7.0
         chirality = pi/2
         icx = Material.nx/2
         icy = Material.ny/2
@@ -61,7 +66,7 @@ module UserInputs
     end
 
     module Ranges
-        rRange=[8.0:12.0;]
+        pbc = [4.0:7.0;]
     end
 
     module SaveChoices
@@ -83,8 +88,7 @@ module UserInputs
     module Paths
         relaxation = string(dirname(pwd()),"/02-data/relaxation/")
         output = string(dirname(pwd()),"/02-data/out/")
-
-        starting = string(dirname(pwd()),"/02-data/store/")
+        initialConds = string(dirname(pwd()),"/02-data/store/")
     end
 
     module Filenames
@@ -94,12 +98,14 @@ module UserInputs
         # If you would like to import pre-computed relaxation data and run
         # dynamics, change the filename here
         function outputSuffix(p)
-            return string("_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",p.mp.nz,"_J=",p.mp.j,
-            "_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",round(p.mp.dz,digits=5),
-            "_BETA=",p.mp.ed,"_R=",p.ic.r,".h5")
+            return string("_BC=",p.mp.pbc,"_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
+            p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
+            round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_R=",p.ic.r,".h5")
         end
         function inputName(p)
-            return string("S_1.0",outputSuffix(p))
+            return string("S_CONSTRAINED_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
+            p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
+            round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_R=",p.ic.r,".h5")
         end
 
         exch = "EXCHANGE"
