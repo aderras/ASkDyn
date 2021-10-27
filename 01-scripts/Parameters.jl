@@ -52,6 +52,7 @@ module Parameters
     # stucts in this file. The name here must exactly match the name of
     # the variable in the original struct.
     mutable struct paramRanges
+        r
         pbc
     end
 
@@ -151,13 +152,12 @@ module Parameters
         myPinningParams = pinningParams(0.0)
         myDefectParams = defectParams(0, 0.0, 0.0, 0, 0, [])
         mySaveChoices = saveChoices(0,0,0,0,0,0,0,0,0,0,0,0)
-        # myParamRanges = paramRanges([],[])
         myCurrentChoices = currentParams(0.0, 0.0, 100)
 
         # Now put all of the user choices into one struct
         allParams = params(myMatParams, myCompParams, myICParams,
             myPinningParams,myDefectParams, myCurrentChoices,
-            mySaveChoices)#), myParamRanges)
+            mySaveChoices)
 
         return allParams
 
@@ -231,7 +231,9 @@ module Parameters
         # Get field names of the range struct
         fields = fieldnames(typeof(rangeParams))
         vals=[getfield(rangeParams,f) for f in fields]
+        if all(length.(vals).==0) push!(paramList,allParams); return end
         iters=[1:length(vec) for vec in vals]
+
 
         for i in iters[count]
             if count==1 iCurr=[] else iCurr=iCurr[1:(count-1)] end
