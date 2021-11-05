@@ -61,7 +61,8 @@ if testParams.cp.parallel == 1
     @everywhere module Test
         push!(LOAD_PATH, pwd())
 
-        using Parameters, SpinDynamics, Distributed
+        using SpinDynamics, Distributed
+        include("Parameters.jl")
 
         function parallelize(testParams, rp)
           # All params is a list of all combinations of the requested inputs
@@ -77,14 +78,9 @@ if testParams.cp.parallel == 1
 
 else
 
-allParams = []
-Parameters.getparamlist!(testParams, allParams, rp)
+    allParams = []
+    Parameters.getparamlist!(testParams, allParams, rp)
 
-for i in 1:length(allParams)
-    println()
-    println(allParams[i])
-end
-
-# map(launchcomputation, allParams)
+    map(launchcomputation, allParams)
 
 end
