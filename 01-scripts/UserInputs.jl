@@ -18,7 +18,7 @@ module UserInputs
 
     module Computation
         # Computation paramters
-        tMax = 1
+        tMax = 10
         dt = 0.2
         nSteps = 10
         tol = 10^-5
@@ -66,7 +66,8 @@ module UserInputs
     end
 
     module Ranges
-        pbc = [4.0:7.0;]
+        r = []
+        pbc = []
     end
 
     module SaveChoices
@@ -100,7 +101,8 @@ module UserInputs
         function outputSuffix(p)
             return string("_BC=",p.mp.pbc,"_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
             p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
-            round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_R=",p.ic.r,".h5")
+            round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_R=",p.ic.r,"_DT=",
+            p.cp.nn*p.cp.dt,".h5")
         end
         function inputName(p)
             return string("S_CONSTRAINED_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",

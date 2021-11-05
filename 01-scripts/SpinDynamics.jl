@@ -97,7 +97,7 @@ module SpinDynamics
 
         for i in 1:maxLoop
 
-            computeLL!(mat, params, relaxation)
+            @time computeLL!(mat, params, relaxation)
 
             en = energy(mat, params)
             allArrays[1][i] = en

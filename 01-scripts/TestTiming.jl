@@ -59,13 +59,13 @@ s0 = buildinitial(testParams.ic, testParams.mp)
 print("Compute chirality")
 @btime Chirality.computeGamma(s0,testParams)
 
-# print("Get material parameter fields")
-# @btime [getfield(testParams.mp, x)
-#     for x in fieldnames(typeof(testParams.mp))]
-# j,h,a,dz,ed,nx,ny,nz,pbc,vd = [getfield(testParams.mp, x)
-#     for x in fieldnames(typeof(testParams.mp))]
-#
-# println("\nNx=Ny=", nx, " lattice")
+print("Get material parameter fields")
+@btime [getfield(testParams.mp, x)
+    for x in fieldnames(typeof(testParams.mp))]
+j,h,a,dz,ed,nx,ny,nz,pbc,vd = [getfield(testParams.mp, x)
+    for x in fieldnames(typeof(testParams.mp))]
+
+println("\nNx=Ny=", nx, " lattice")
 #
 # println("\nCompute energy")
 # print("Exchange")
@@ -85,11 +85,11 @@ print("Compute chirality")
 #     @btime ddi_energy(s0, ed, pbc, vd)
 # end
 #
-# Heff = zeros(3,nx,ny)
-# println("\nCompute effective field")
-# print("Exchange")
-# @btime exchangefield!(Heff, s0, j, pbc, testParams.defect)
-#
+Heff = zeros(3,nx,ny)
+println("\nCompute effective field")
+print("Exchange")
+@btime exchangefield!(Heff, s0, j, pbc, testParams.defect)
+
 # print("Zeeman")
 # @btime zeemanfield!(Heff, s0, h)
 #
