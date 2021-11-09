@@ -135,7 +135,7 @@ module SpinDynamics
                 h5overwrite(string(reldir,"S_",i*p.cp.dt,"_", filesuffix),mat)
             end
             if params.save.chir == 1.0
-                allArrays[12][i] = Chirality.computeGamma(mat, params)
+                allArrays[12][i] = Chirality.computeGamma(mat, params.cp.rChirality)
             end
 
 
