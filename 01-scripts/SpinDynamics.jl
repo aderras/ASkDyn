@@ -76,8 +76,9 @@ module SpinDynamics
 
         # Make arrays to store data based on what user requested
         # Can't think of a smarter way to do this....
-        allArrays = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],
-            [0.0],[0.0],[0.0]]
+        # allArrays = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],
+            # [0.0],[0.0],[0.0]]
+        allArrays = [[0.0] for i in 1:length(fieldnames(typeof(params.save)))]
 
         count = 1
         for x in fieldnames(typeof(params.save))
@@ -97,7 +98,7 @@ module SpinDynamics
 
         for i in 1:maxLoop
 
-            @time computeLL!(mat, params, relaxation)
+            computeLL!(mat, params, relaxation)
 
             en = energy(mat, params)
             allArrays[1][i] = en
