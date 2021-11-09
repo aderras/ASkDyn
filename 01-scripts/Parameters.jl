@@ -22,7 +22,7 @@
 =#
 module Parameters
 
-    using Dipolar, EffectiveField
+    using Dipolar, EffectiveField, UserInputs
     export getParameters, buildparam, params, getparamlist!,
         setfield_nestedstruct!, getconfirmation
     export materialParams, llgParams, faParams, icParams, pinningParams,
@@ -223,7 +223,7 @@ module Parameters
 
     # Builds a list of all the compuatation parameters requested by the user. It
     # does this by reursively sesarching through the user requests to make
-    # combinations of all possible parameters. Stores all user requests in the
+    # combinations of all possible  Stores all user requests in the
     # input array, paramList
     function getparamlist!(allParams, paramList, rangeParams, iters=[],
         iCurr=[], count=1)
@@ -249,6 +249,59 @@ module Parameters
                 getparamlist!(allParams, paramList, rangeParams, iters, iCurr, count+1)
             end
         end
+    end
+
+    function buildUserInputParam()
+
+        # Only build the following matrices if the dipolar interaction is nonzero
+        if UserInputs.Material.ed!=0.0
+            v = vdmatrices(UserInputs.Material.nx, UserInputs.Material.ny,
+                UserInputs.Material.nz, 1.0==UserInputs.Material.pbc)
+        else
+            v = [[0.0 0.0; 0.0 0.0],[0.0 0.0; 0.0 0.0],[0.0 0.0; 0.0 0.0],
+                [0.0 0.0; 0.0 0.0]]
+        end
+
+        # Create all the structs to be used by the rest of the program.
+        mp = materialParams(UserInputs.Material.j,
+            UserInputs.Material.h, UserInputs.Material.a, UserInputs.Material.dz,
+            UserInputs.Material.ed, UserInputs.Material.nx, UserInputs.Material.ny,
+            UserInputs.Material.nz, UserInputs.Material.pbc, v)
+
+        cp = compParams(UserInputs.Computation.tMax, UserInputs.Computation.dt,
+            UserInputs.Computation.nSteps, UserInputs.Computation.tol,
+            UserInputs.Computation.damping, UserInputs.Computation.T,
+            UserInputs.Computation.parallel, UserInputs.Computation.numCores,
+            UserInputs.Computation.runRelaxation, UserInputs.Computation.sMax,
+            UserInputs.Computation.faConst,UserInputs.Computation.nRot,
+            UserInputs.Computation.faTol, UserInputs.Computation.rChirality)
+
+        ic = icParams(UserInputs.InitialCondition.type,
+            UserInputs.InitialCondition.r, UserInputs.InitialCondition.chirality,
+            UserInputs.InitialCondition.icx, UserInputs.InitialCondition.icy)
+
+        pp = pinningParams(UserInputs.Pinning.pinField)
+
+        dp = defectParams(UserInputs.Defect.defType,
+            UserInputs.Defect.defStrength, UserInputs.Defect.defWidth,
+            UserInputs.Defect.defX, UserInputs.Defect.defY, [])
+
+        cc = currentParams(UserInputs.Current.xCurr,
+            UserInputs.Current.yCurr, UserInputs.Current.tOff)
+
+        sp = saveChoices(UserInputs.SaveChoices.totalE,
+            UserInputs.SaveChoices.exchE, UserInputs.SaveChoices.zeemE,
+            UserInputs.SaveChoices.dmiE, UserInputs.SaveChoices.pmaE,
+            UserInputs.SaveChoices.ddiE, UserInputs.SaveChoices.magn,
+            UserInputs.SaveChoices.size, UserInputs.SaveChoices.charge,
+            UserInputs.SaveChoices.loc, UserInputs.SaveChoices.fieldDuring,
+            UserInputs.SaveChoices.chirality)
+
+
+        userParams = params(mp, cp, ic, pp, dp, cc, sp)
+
+        return userParams
+
     end
 
 end
