@@ -1,10 +1,10 @@
 #!/usr/bin/env julia1
 push!(LOAD_PATH, pwd())
-include("Parameters.jl")
+include("Params.jl")
 using SpinDynamics, BenchmarkTools, UserInputs,InitialCondition, EffectiveField,
 Energy, EffectiveSize, Dipolar, Chirality, LLequation, RungeKutta
 
-testParams = Parameters.buildUserInputParam()
+testParams = Params.buildUserInputParam()
 
 println("Build skyrmion")
 s0 = buildinitial(testParams.ic, testParams.mp)

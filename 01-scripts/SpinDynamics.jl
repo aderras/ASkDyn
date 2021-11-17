@@ -158,9 +158,8 @@ module SpinDynamics
             end
 
             # Print if debugging
-            println("i = ", i, ", E = ", allArrays[1][i], ", |Delta(E)| = ",
-                abs(en-enPrev))
-            # println("s[10,10] = ", mat[1,10,10],mat[3,10,10],mat[2,10,10])
+            # println("i = ", i, ", E = ", allArrays[1][i], ", |Delta(E)| = ",
+                # abs(en-enPrev))
 
             # Check for collapse if this is a skyrmion
             if params.ic.type == "skyrmion"

@@ -91,7 +91,7 @@ module LLequation
     # Current implemented here.
     #
     # in: s = (3,m,n) spin array, matRHS = (3,m,n) right side of LLG equation
-    # (matRHS is updated in the function), current = struct from Parameters
+    # (matRHS is updated in the function), current = struct from Params
     # containing current parameters
     #
     # out: nothing

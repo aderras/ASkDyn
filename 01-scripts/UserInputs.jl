@@ -65,11 +65,6 @@ module UserInputs
         tOff = 0
     end
 
-    module Ranges
-        # r = [7.0:12.0;]
-        # pbc = []
-    end
-
     module SaveChoices
         totalE = 1
         exchE = 0
@@ -85,6 +80,19 @@ module UserInputs
         chirality = 0
     end
 
+    #=
+        If user would like to run the script for a range of values, store
+        those values in the following struct. Elements of this struct are
+        1d arrays.
+
+        The name of each field in paramRanges must exactly match the name of
+        the field in the original struct. All structs are located in Params.jl
+    =#
+    Base.@kwdef mutable struct paramRanges
+        r = [7.0:12.0;] # "r" (radius) field comes from the struct icParams
+        # pbc
+    end
+
     # All the paths for importing and exporting files
     module Paths
         relaxation = string(dirname(pwd()),"/02-data/relaxation/")
@@ -97,7 +105,7 @@ module UserInputs
         #     trunc(Int,rand()*10000))
 
         # If you would like to import pre-computed relaxation data and run
-        # dynamics, change the filename here
+        # dynamics, change the filename here. 
         function outputSuffix(p)
             return string("_BC=",p.mp.pbc,"_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
             p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
@@ -105,7 +113,7 @@ module UserInputs
             p.cp.nn*p.cp.dt,".h5")
         end
         function inputName(p)
-            return string("DELETETHIS--S_CONSTRAINED_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
+            return string("S_CONSTRAINED_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
             p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
             round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_R=",p.ic.r,".h5")
         end
