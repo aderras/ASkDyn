@@ -5,7 +5,9 @@ using Distributed, SpinDynamics, BenchmarkTools, UserInputs
 using InitialCondition, EffectiveField, Energy, EffectiveSize, Dipolar
 
 userParams = Parameters.buildUserInputParam()
-rp = Parameters.paramRanges(UserInputs.Ranges.r)#, UserInputs.Ranges.pbc)
+rp = Parameters.paramRanges()#UserInputs.Ranges.r)#, UserInputs.Ranges.pbc)
+
+userParams.ic.type = "prec"
 
 if userParams.cp.parallel == 1
 

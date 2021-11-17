@@ -17,10 +17,10 @@ module UserInputs
     end
 
     module Computation
-        # Computation paramters
-        tMax = 10
+        # Computation parameters
+        maxSteps = 10 # This is the maximum number of computation steps
         dt = 0.2
-        nSteps = 10
+        nSteps = 1
         tol = 10^-5
         damping = 0.0
         T = 0.0
@@ -66,8 +66,8 @@ module UserInputs
     end
 
     module Ranges
-        r = []
-        pbc = []
+        # r = [7.0:12.0;]
+        # pbc = []
     end
 
     module SaveChoices
@@ -78,11 +78,11 @@ module UserInputs
         pmaE = 0
         ddiE = 0
         magn = 1
-        size = 1
-        charge = 1
+        size = 0
+        charge = 0
         loc = 0
-        fieldDuring = 0
-        chirality = 1
+        fieldDuring = 1
+        chirality = 0
     end
 
     # All the paths for importing and exporting files
@@ -101,11 +101,11 @@ module UserInputs
         function outputSuffix(p)
             return string("_BC=",p.mp.pbc,"_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
             p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
-            round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_R=",p.ic.r,"_DT=",
+            round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_DT=",
             p.cp.nn*p.cp.dt,".h5")
         end
         function inputName(p)
-            return string("S_CONSTRAINED_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
+            return string("DELETETHIS--S_CONSTRAINED_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
             p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
             round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_R=",p.ic.r,".h5")
         end

@@ -5,6 +5,7 @@
 module RungeKutta
 
     using LLequation
+    using LoopVectorization
     export rk4!
 
     # Calling this function once leads to 'n' iterations of the
@@ -17,47 +18,49 @@ module RungeKutta
     # X0, params = struct of evaluation parameters, relax = relaxation (T/F)
     #
     # out = nothing
-    function rk4!(X0::Array{Float64,3}, f::Function, params, relax=false)
-
-        p, m, n = size(X0)
-
-        llgParams = params.cp
-
-        hStep = llgParams.dt
-        nn = llgParams.nn
-    
-        # Initialize vars
-        t0 = 0.0
-
-        # Initialize arrays for the RK steps
-        K1 = Array{Float64}(undef,p,m,n)
-        K2 = Array{Float64}(undef,p,m,n)
-        K3 = Array{Float64}(undef,p,m,n)
-        K4 = Array{Float64}(undef,p,m,n)
-        X = Array{Float64}(undef,p,m,n)
-
-        X .= X0 # starting with specified
-
-        for k in 1:nn
-
-            # In this implentation the equation were solving
-            # has no t in RHS, so the t value is arbitrary.
-            t = t0 + k*hStep
-
-            f(t, X, K1, params, relax)
-
-            f(t + 0.5*hStep, (X .+ (0.5*hStep).* K1) , K2, params, relax)
-
-            f(t + 0.5*hStep, (X .+ (0.5*hStep) .* K2), K3, params, relax)
-
-            f(t + hStep, (X .+ hStep*K3), K4, params, relax)
-
-            X .= X .+ (1/6*hStep).*K1 .+ (1/3*hStep).*K2 .+
-                (1/3*hStep).*K3 .+ (1/6*hStep).*K4
+    function elemSum!(dest::Array{Float64,3}, A::Array{Float64,3},
+        B::Array{Float64,3}, a::Float64, b::Float64)
+        p,m,n = size(A)
+        @avx for i in 1:m, j in 1:m, k in 1:p
+           dest[k,i,j] = a*A[k,i,j] + b*B[k,i,j]
         end
-
-        X0 .= X # rewrite input variable with the result
-
     end
 
+    function elemSum!(dest::Array{Float64,3}, A::Array{Float64,3},
+            B::Array{Float64,3}, C::Array{Float64,3},D::Array{Float64,3},
+            E::Array{Float64,3}, a::Float64, b::Float64, c::Float64, d::Float64,
+            e::Float64)
+        p,m,n = size(A)
+        @avx for i in 1:m, j in 1:m, k in 1:p
+           dest[k,i,j] = a*A[k,i,j] + b*B[k,i,j] + c*C[k,i,j] +
+               d*D[k,i,j] + e*E[k,i,j]
+        end
+    end
+
+    function rk4!(t0, X::Array{Float64,3}, f::Function,
+            params,
+            fargs,
+            K,
+            relax=false)
+
+        p, m, n = size(X)
+        tmp = K[end] # last element is a dummy array
+
+        t = t0
+        hStep = params.cp.dt
+
+        for k in 1:params.cp.nn
+            t += k*params.cp.dt
+            f(t, X, K[1], fargs, params, relax)
+            elemSum!(tmp, X, K[1], 1.0, 0.5*hStep)
+            f(t + 0.5*hStep, tmp , K[2], fargs, params, relax)
+            elemSum!(tmp, X, K[2], 1.0, 0.5*hStep)
+            f(t + 0.5*hStep, tmp, K[3], fargs, params, relax)
+            elemSum!(tmp, X, K[3], 1.0, hStep)
+            f(t + hStep, tmp, K[4], fargs, params, relax)
+            elemSum!(tmp, X, K[1], K[2], K[3], K[4],
+                1.0, (1/6*hStep), (1/3*hStep), (1/3*hStep), (1/6*hStep))
+            X .= tmp
+        end
+    end
 end

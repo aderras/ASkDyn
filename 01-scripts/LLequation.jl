@@ -13,7 +13,8 @@
 =#
 module LLequation
 
-    import EffectiveField
+    using EffectiveField
+    using LoopVectorization
     export RHS!
 
     # RHS computes the right side of ds/dt = ... from LLG by updating 'mat'
@@ -22,37 +23,44 @@ module LLequation
     # parameters, relax = relaxation == true/false (default false)
     #
     # out: nothing
-    function RHS!(t::Float64, mat::Array{Float64,3},
-        matRHS::Array{Float64,3}, params, relax=false)
 
-        p, m, n = size(mat)
 
-        # If running relaxation, set damping to 1. Otherwise use user input.
-        if relax
-            lambda = 1.0
-        else
-            lambda = params.cp.damp
+    # With @avx macro, this loop speeds up by 10x, but it
+    # introduces an error on the order of 1e-16. Interesting
+    function dotSum!(dest, mat1, mat2)
+        p, m, n = size(mat1)
+        @avx for i in 1:m, j in 1:n
+            dest[i,j] = 0
+            for q in 1:p dest[i,j] += mat1[q,i,j]*mat2[q,i,j] end
         end
 
-        Heff = Array{Float64}(undef,p,m,n)
+        # println("sum(dest) = ", sum(dest), ", sum(s0) = ", sum(mat1), ", sum(Heff) = ", sum(mat2))
+    end
+
+    # Improved version
+    function RHS!(t::Float64,
+            mat::Array{Float64,3},
+            matRHS::Array{Float64,3},
+            rhsArgs,
+            params,
+            relax=false)
+
+        # If running relaxation, set damping to 1. Otherwise use user input.
+        if relax lambda = 1.0 else lambda = params.cp.damp end
 
         # Calculate effective field.
-        Heff = EffectiveField.effectivefield(mat, params)
+        effectivefield!(rhsArgs[1], mat, params)
 
-        # Calculate S dot H.
-        SDotH = zeros(1,m,n)
-        SDotH .= sum(mat.*Heff, dims=1)
+        # Calculate S dot H if damping is nonzero
+        if lambda!=0.0 dotSum!(rhsArgs[2], mat, rhsArgs[1]) end
 
-        fillRHS!(mat, Heff, SDotH, matRHS, lambda)
+        fillRHS!(matRHS, mat, rhsArgs[1], rhsArgs[2], lambda)
 
         # Only add current if nonzero and this is dynamics (not relaxation).
         if (params.current.jx != 0.0 && relax==false) ||
             (params.current.jy != 0.0 && relax==false)
-
             addCurrent!(mat, matRHS, params.current)
-
         end
-
     end
 
     # LLG implemented here.
@@ -62,19 +70,20 @@ module LLequation
     # side of LLG equation (modifies this matrix)
     #
     # out: nothing
-    function fillRHS!(mat::Array{Float64,3}, Heff::Array{Float64,3},
-        SDotH::Array{Float64,3}, matRHS::Array{Float64,3},
-        lambda::Float64)
+    function fillRHS!(matRHS::Array{Float64,3}, mat::Array{Float64,3},
+        Heff::Array{Float64,3}, SDotH::Array{Float64,2}, lambda::Float64)
 
-        p, m, n = size(mat)
+        p,m,n = size(mat)
 
         for i in 1:m, j in 1:n
-            matRHS[1,i,j] = mat[2,i,j]*Heff[3,i,j] - mat[3,i,j]*Heff[2,i,j] +
-                lambda*(Heff[1,i,j]-mat[1,i,j]*SDotH[1,i,j])
-            matRHS[2,i,j] = mat[3,i,j]*Heff[1,i,j] - mat[1,i,j]*Heff[3,i,j] +
-                lambda*(Heff[2,i,j]-mat[2,i,j]*SDotH[1,i,j])
-            matRHS[3,i,j] = mat[1,i,j]*Heff[2,i,j] - mat[2,i,j]*Heff[1,i,j] +
-                lambda*(Heff[3,i,j]-mat[3,i,j]*SDotH[1,i,j])
+            matRHS[1,i,j] = mat[2,i,j]*Heff[3,i,j] - mat[3,i,j]*Heff[2,i,j]
+            matRHS[2,i,j] = mat[3,i,j]*Heff[1,i,j] - mat[1,i,j]*Heff[3,i,j]
+            matRHS[3,i,j] = mat[1,i,j]*Heff[2,i,j] - mat[2,i,j]*Heff[1,i,j]
+        end
+        if lambda != 0.0
+            @avx for i in 1:m, j in 1:n, k in 1:p
+                matRHS[k,i,k] += lambda*(Heff[3,i,j]-mat[3,i,j]*SDotH[i,j])
+            end
         end
 
     end
@@ -86,8 +95,7 @@ module LLequation
     # containing current parameters
     #
     # out: nothing
-    function addCurrent!(s::Array{Float64,3},
-        matRHS::Array{Float64,3}, current)
+    function addCurrent!(matRHS::Array{Float64,3}, s::Array{Float64,3}, current)
 
         jx = current.jx
         jy = current.jy

@@ -11,6 +11,7 @@ Required libraries:
  - LinearAlgebra (Used for vector operations.)
  - Distributed (To parallelize.)
  - BenchmarkTools (For testing.)
+ - LoopVectorization (To speed up some loops.)
 
 ## Background
 

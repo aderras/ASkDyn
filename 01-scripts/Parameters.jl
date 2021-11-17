@@ -52,12 +52,12 @@ module Parameters
     # stucts in this file. The name here must exactly match the name of
     # the variable in the original struct.
     mutable struct paramRanges
-        r
-        pbc
+        # r
+        # pbc
     end
 
     mutable struct compParams
-        tMax::Int         # Maximum number of steps to make
+        maxSteps::Int         # Maximum number of steps to make
         dt::Float64       # Step size
         nn::Float64       # Skip this many steps to save
         tol::Float64      # Tolerance for convergence
@@ -268,7 +268,7 @@ module Parameters
             UserInputs.Material.ed, UserInputs.Material.nx, UserInputs.Material.ny,
             UserInputs.Material.nz, UserInputs.Material.pbc, v)
 
-        cp = compParams(UserInputs.Computation.tMax, UserInputs.Computation.dt,
+        cp = compParams(UserInputs.Computation.maxSteps, UserInputs.Computation.dt,
             UserInputs.Computation.nSteps, UserInputs.Computation.tol,
             UserInputs.Computation.damping, UserInputs.Computation.T,
             UserInputs.Computation.parallel, UserInputs.Computation.numCores,

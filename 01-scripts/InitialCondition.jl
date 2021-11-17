@@ -118,8 +118,19 @@ module InitialCondition
             end
         elseif t == "ferromagnet"
             for i in 1:Nx, j in 1:Ny
-                    mat[3,i,j] = 1.0
+                mat[3,i,j] = 1.0
             end
+        elseif t == "prec"
+            for i in 1:Nx, j in 1:Ny
+                mat[3,i,j] = 1.0
+            end
+            ang = pi/4
+            mat[2,round(Int,Nx/2),round(Int,Ny/2)] = sin(ang)
+            mat[3,round(Int,Nx/2),round(Int,Ny/2)] = cos(ang)
+        else
+            println("Initial condition selected is not an option in
+            InitialCondition.jl.")
+            exit()
         end
 
         return mat

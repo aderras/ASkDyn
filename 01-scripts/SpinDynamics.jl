@@ -43,19 +43,19 @@ module SpinDynamics
             end
         end
 
-        # Then dynamics
         rundynamics!(s0, p)
         println("Completed eval on worker ", myid())
 
     end
 
-    # in: mat = (N,N,3) initial condition, params struct
+    # in: mat = (N,N,3) initial condition, params struct, optional relaxation
+    # boolean determines whether to set damping to 1.0 or keep user input.
     # out: returns nothing. Modifies mat and exports data to disk
     function rundynamics!(mat::Array{Float64,3}, params, relaxation=false)
 
-        maxLoop = params.cp.tMax
+        maxLoop = params.cp.maxSteps
 
-        ###########################################################################
+        ########################################################################
 
         j,h,a,dz,ed,nx,ny,nz,pbc,vdd =
             [getfield(params.mp, x) for x in fieldnames(typeof(params.mp))]
@@ -74,21 +74,19 @@ module SpinDynamics
             params.cp.nSteps = round(Int64,p.cp.nSteps/2)
         end
 
-        # Make arrays to store data based on what user requested
-        # Can't think of a smarter way to do this....
-        # allArrays = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],
-            # [0.0],[0.0],[0.0]]
         allArrays = [[0.0] for i in 1:length(fieldnames(typeof(params.save)))]
 
         count = 1
         for x in fieldnames(typeof(params.save))
-            if getfield(params.save, x)==1
-                allArrays[count] = zeros(maxLoop)
-            end
+            if getfield(params.save, x)==1 allArrays[count] = zeros(maxLoop) end
             count = count+1
         end
+        # Always measure the energy. Also always measure Q if this is a skyrmion
+        allArrays[1] = zeros(maxLoop)
+        if params.ic.type == "skyrmion" allArrays[9] = zeros(maxLoop) end
 
-        ##########################################################################
+
+        ########################################################################
         # Begin computation
 
         # Stopping criteria: energy converges to within some tolerance
@@ -96,9 +94,24 @@ module SpinDynamics
         en = 10.0
         enPrev = 0.0
 
+        p,m,n = size(mat)
+
+        Heff = zeros(p,m,n)
+        SDotH = zeros(m,n)
+
+        # Initialize arrays for the RK steps
+        K1 = zeros(p,m,n)
+        K2 = zeros(p,m,n)
+        K3 = zeros(p,m,n)
+        K4 = zeros(p,m,n)
+        tmp = zeros(p,m,n);
+
+        stmp = zeros(p)
+
         for i in 1:maxLoop
 
-            computeLL!(mat, params, relaxation)
+            computeLL!(mat, params, [Heff, SDotH], [K1, K2, K3, K4, tmp],
+                relaxation)
 
             en = energy(mat, params)
             allArrays[1][i] = en
@@ -123,7 +136,7 @@ module SpinDynamics
             if params.save.size == 1.0
                 allArrays[8][i] = effectivesize(mat)
             end
-            allArrays[9][i] = calcQ(mat)
+            if params.ic.type == "skyrmion" allArrays[9][i] = calcQ(mat) end
 
             # THE FOLLOWING LOCATION SAVER IS INCORRECT
             if params.save.location == 1.0
@@ -133,28 +146,33 @@ module SpinDynamics
                 allArrays[10][i] = 0.0
             end
             if params.save.spinField == 1.0
-                h5overwrite(string(reldir,"S_",i*p.cp.dt,"_", filesuffix),mat)
+                if i%1 ==0
+                    h5overwrite(string(reldir,"S_",
+                        round(i*params.cp.dt*params.cp.nn, digits=2),
+                        "_",filesuffix),mat)
+                end
             end
             if params.save.chir == 1.0
-                allArrays[12][i] = Chirality.computeGamma(mat, params.cp.rChirality)
+                allArrays[12][i] = Chirality.computeGamma(stmp, mat,
+                    params.cp.rChirality)
             end
 
-
             # Print if debugging
-            #println("i = ", i, ", Q = ", qArray[i], ", E = ", enArray[i])
+            println("i = ", i, ", E = ", allArrays[1][i], ", |Delta(E)| = ",
+                abs(en-enPrev))
+            # println("s[10,10] = ", mat[1,10,10],mat[3,10,10],mat[2,10,10])
 
-            # Check for collapse
-            if abs(allArrays[9][i]) < 0.1 break end
-
+            # Check for collapse if this is a skyrmion
+            if params.ic.type == "skyrmion"
+                if abs(allArrays[9][i]) < 0.1 break end
+            end
             # Check for convergence with energy if this is relaxation
             if relaxation && i > 10 && abs(en-enPrev) < params.cp.tol break end
             enPrev = en
         end
 
-        # Save with a timestamp and random number generator if you are running the same computation
-        # multiple times. (Not using right now because still testing and want to overwrite saved
-        # files instead of filling up the folder with distinct data.)
-
+        # Save with a timestamp and random number generator if you are running
+        # the same computation multiple times.
         count = 1
         for x in fieldnames(typeof(params.save))
             if getfield(params.save, x)==1
@@ -178,16 +196,17 @@ module SpinDynamics
     end
 
     # Calculates Landau Lifshitz equation
-    function computeLL!(s::Array{Float64,3}, params, relaxation=false)
+    function computeLL!(s::Array{Float64,3}, params, fArgs, rkMatrices,
+        relaxation=false)
 
         # This is the pulse-noise algorithm
         if params.cp.temp == 0.0
-            rk4!(s, RHS!, params, relaxation)
+            rk4!(0.0, s, RHS!, params, fArgs, rkMatrices, relaxation)
             normalizelattice!(s)
         else
-            rk4!(s, RHS!, params, relaxation)
+            rk4!(0.0, s, RHS!, params, fArgs, rkMatrices, relaxation)
             noisyrotate!(s, params.cp)
-            rk4!(s, RHS!, params, relaxation)
+            rk4!(0.0, s, RHS!, params,  fArgs, rkMatrices, relaxation)
             normalizelattice!(s)
         end
     end

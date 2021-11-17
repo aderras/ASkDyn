@@ -30,9 +30,10 @@
 =#
 module EffectiveField
 
-    import Dipolar, InitialCondition
+    import Dipolar, InitialCondition, BoundaryConditions
     import DefectFunctions
-    export effectivefieldelem!, effectivefield, ddifield, exchangefield!,
+    using LoopVectorization
+    export effectivefieldelem!, effectivefield!, ddifield, exchangefield!,
     zeemanfield!, pmafield!, dmifield!, exchangefieldelemB!
 
     # effectivefieldelem! modifies a (3, 1) array to equal the effective field
@@ -219,49 +220,55 @@ module EffectiveField
     #
     # out: (3, m, n) array defining effective field at every point in the
     # input array, mat
-    function effectivefield(mat::Array{Float64,3}, params)
+    function effectivefield!(Heff::Array{Float64,3}, mat::Array{Float64,3}, p)
+        Heff .= 0.0 # Set initial value to zero
+        exchangefield!(Heff, mat, p.mp.j, p.mp.pbc)
+        if p.mp.h != 0 EffectiveField.zeemanfield!(Heff, mat, p.mp.h) end
+        if p.mp.a != 0.0 EffectiveField.dmifield!(Heff, mat, p.mp.a, p.mp.pbc) end
+        if p.mp.dz != 0.0 EffectiveField.pmafield!(Heff, mat, p.mp.dz) end
 
-        matParams = params.mp
-        j,h,a,dz,ed,n,m,nz,pbc,v =
-            [getfield(matParams, x) for x in fieldnames(typeof(matParams))]
-
-
-        Heff = zeros(3, m, n)
-
-        # Exchange effective field
-        exchangefield!(Heff, mat, j, pbc, params.defect)
-        zeemanfield!(Heff, mat, h)
-
-        if a != 0.0
-            dmifield!(Heff, mat, a, pbc)
-        end
-        if dz != 0.0
-            pmafield!(Heff, mat, dz)
-        end
-
-        if ed != 0.0
-            dipField = Array{Float64}(undef, 3, m, n)
-            dipField = ddifield(mat, ed, pbc, v)
-
+        if p.mp.ed != 0.0
+            pp, mm, nn = size(mat)
+            dipField = Array{Float64}(undef, pp, mm, nn)
+            dipField = EffectiveField.ddifield(mat, p.mp.ed, p.mp.pbc, p.mp.v)
             Heff = Heff + dipField
         end
 
         # If there is a pinning field, add the field at the point where the
-        # skyrmion was initially created.
-        if params.pin.hPin != 0.0
-            hPin = params.pin.hPin
-            px = params.ic.px
-            py = params.ic.py
-            Heff[3,px,py] = Heff[3,px,py] + hPin
+        # skyrmion was initially created. You can also use this to set the
+        # effective field at a point to zero in order to pin a field.
+        if p.pin.hPin != 0.0
+            Heff[3,p.ic.px,p.ic.py] += p.pin.hPin
+            # for q in 1:3 Heff[q,round(Int,p.ic.px),round(Int,p.ic.py)] = 0 end
         end
 
-        return Heff
     end
 
-    function dot(vec1,vec2)
-        sum=0.0
-        for i in 1:length(vec1) sum+=vec1[i]*vec2[i] end
-        return sum
+    function addbc!(Heff::Array{Float64,3}, mat::Array{Float64,3}, bc)
+        p,m,n = size(mat)
+        ll = length(bc)
+
+        bcVal = zero(eltype(Heff))
+
+        for j in 1:n, k in 1:p
+            bcVal = 0.0
+            for q in 1:ll bcVal += bc[q]*mat[k,q,j] end
+            Heff[k,1,j] += bcVal
+
+            bcVal = 0.0
+            for q in 1:ll bcVal += bc[ll-q+1]*mat[k,m-ll+q,j] end
+            Heff[k,m,j] += bcVal
+        end
+
+        for i in 1:m, k in 1:p
+            bcVal = 0.0
+            for q in 1:ll bcVal += bc[q]*mat[k,i,q] end
+            Heff[k,i,1] += bcVal
+
+            bcVal = 0.0
+            for q in 1:ll bcVal += bc[ll-q+1]*mat[k,i,n-ll+q] end
+            Heff[k,i,n] += bcVal
+        end
     end
 
     # Compute the exchange field of the entire spin array, mat. Nearest neighbor
@@ -272,68 +279,36 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function exchangefield!(Heff::Array{Float64,3},
-        mat::Array{Float64,3}, J, pbc, defectParams = [])
+    function exchangefield!(Heff::Array{Float64,3}, mat::Array{Float64,3},
+        J, pbc)
 
         p, m, n = size(mat)
+        bcInt = round(Int64,pbc)
 
-        if defectParams != []
-            if defectParams.t == 2
-                exchangefield_defect!(Heff, mat, J, pbc, defectParams)
-                return
-            end
+        @avx for j in 1:n, i in 1:m-1, k in 1:p
+            Heff[k,i,j] += mat[k,i+1,j]
+        end
+        @avx for j in 1:n, i in 2:m, k in 1:p
+            Heff[k,i,j] += mat[k,i-1,j]
+        end
+        @avx for j in 1:n-1, i in 1:m, k in 1:p
+            Heff[k,i,j] += mat[k,i,j+1]
+        end
+        @avx for j in 2:n, i in 1:m, k in 1:p
+            Heff[k,i,j] += mat[k,i,j-1]
         end
 
-        for j in 1:n, i in 1:m-1, k in 1:p
-            Heff[k,i,j] += mat[k,i+1,j]
-	    end
-        for j in 1:n, i in 2:m, k in 1:p
-	        Heff[k,i,j] += mat[k,i-1,j]
-	    end
-        for j in 1:n-1, i in 1:m, k in 1:p
-		    Heff[k,i,j] += mat[k,i,j+1]
-	    end
-        for j in 2:n, i in 1:m, k in 1:p
-		    Heff[k,i,j] += mat[k,i,j-1]
-	    end
-
-        extrap0 = [0.0] # Need this as a placeholder
-
-        # First order backward euler, linear and quadratic interp
-        extrap1 = [2.0,-1.0]
-        extrap2 = [3.0,-3.0,1.0]
-
-        # 4th order backward difference, linear and quadratic interp
-        extrap3 = [37.0, -48.0, 36.0, -16.0, 3.0]/12.0
-        extrap4 = [41.0, -101.0, 125.0, -86.0, 32.0, -5.0]/6.0
-
-        # 4th order central difference, linear and quadratic interp
-        extrap5 = [-0.25, 2.0, 1.0, -2.0, 0.25]
-        extrap6 = [-2.75, 14.0, -21.5, 10.0, -0.5]
-
-        extrap = [extrap0, extrap1, extrap2, extrap3, extrap4, extrap5, extrap6]
-
-        if pbc!=0.0 bc = extrap[round(Int64,pbc)] end
-
-    	if pbc==1.0
-    		for j in 1:n, k in 1:p
-    		    Heff[k,m,j] += mat[k,1,j]
-    		    Heff[k,1,j] += mat[k,m,j]
-    		end
-    		for i in 1:m, k in 1:p
-    		    Heff[k,i,1] += mat[k,i,n]
-    		    Heff[k,i,n] += mat[k,i,1]
-    		end
-    	elseif pbc>1.0
-            ll = length(bc)
-            for j in 1:n, k in 1:p
-                Heff[k,1,j] += dot(bc, mat[k,1:ll,j])
-                Heff[k,m,j] += dot(reverse(bc), mat[k,m-ll+1:m,j])
+        if pbc==1.0
+            @avx for j in 1:n, k in 1:p
+                Heff[k,m,j] += mat[k,1,j]
+                Heff[k,1,j] += mat[k,m,j]
             end
-            for i in 1:m, k in 1:p
-                Heff[k,i,1] += dot(bc, mat[k,i,1:ll])
-                Heff[k,i,n] += dot(reverse(bc), mat[k,i,n-ll+1:n])
+            @avx for i in 1:m, k in 1:p
+                Heff[k,i,1] += mat[k,i,n]
+                Heff[k,i,n] += mat[k,i,1]
             end
+        elseif pbc>1.0
+            addbc!(Heff, mat, BoundaryConditions.extrap[bcInt])
         end
     end
 
