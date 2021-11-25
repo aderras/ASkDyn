@@ -110,7 +110,7 @@ module SpinDynamics
 
         for i in 1:maxLoop
 
-            computeLL!(mat, params, [Heff, SDotH], [K1, K2, K3, K4, tmp],
+            @time computeLL!(mat, params, [Heff, SDotH], [K1, K2, K3, K4, tmp],
                 relaxation)
 
             en = energy(mat, params)
@@ -149,7 +149,7 @@ module SpinDynamics
                 if i%1 ==0
                     h5overwrite(string(reldir,"S_",
                         round(i*params.cp.dt*params.cp.nn, digits=2),
-                        "_",filesuffix),mat)
+                        filesuffix),mat)
                 end
             end
             if params.save.chir == 1.0
