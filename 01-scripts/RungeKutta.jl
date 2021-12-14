@@ -21,7 +21,9 @@ module RungeKutta
     function elemSum!(dest::Array{Float64,3}, A::Array{Float64,3},
         B::Array{Float64,3}, a::Float64, b::Float64)
         p,m,n = size(A)
-        @avx for i in 1:m, j in 1:m, k in 1:p
+        # Used to have @avx
+
+        for i in 1:m, j in 1:m, k in 1:p
            dest[k,i,j] = a*A[k,i,j] + b*B[k,i,j]
         end
     end
@@ -31,36 +33,46 @@ module RungeKutta
             E::Array{Float64,3}, a::Float64, b::Float64, c::Float64, d::Float64,
             e::Float64)
         p,m,n = size(A)
-        @avx for i in 1:m, j in 1:m, k in 1:p
+        # Used to have @avx
+        for i in 1:m, j in 1:m, k in 1:p
            dest[k,i,j] = a*A[k,i,j] + b*B[k,i,j] + c*C[k,i,j] +
                d*D[k,i,j] + e*E[k,i,j]
         end
     end
 
-    function rk4!(t0, X::Array{Float64,3}, f::Function,
-            params,
-            fargs,
-            K,
-            relax=false)
+    function rk4!(X::Array{Float64,3}, t0::Float64, f::Function,
+        fargs,
+        matParams::Array{Any,1},
+        cpParams::Array{Float64,1},
+        params,
+        K,
+        relax=false,
+        damping=0.0)
 
-        p, m, n = size(X)
+        p,m,n = size(X)
         tmp = K[end] # last element is a dummy array
 
         t = t0
-        hStep = params.cp.dt
+        hStep, nn = cpParams
 
-        for k in 1:params.cp.nn
-            t += k*params.cp.dt
-            f(t, X, K[1], fargs, params, relax)
+        for k in 1:nn
+
+            t += k*hStep
+            f(K[1], t, X, fargs, matParams, params, relax, damping)
+
             elemSum!(tmp, X, K[1], 1.0, 0.5*hStep)
-            f(t + 0.5*hStep, tmp , K[2], fargs, params, relax)
+            f(K[2], t+0.5*hStep, tmp, fargs, matParams, params, relax, damping)
+
             elemSum!(tmp, X, K[2], 1.0, 0.5*hStep)
-            f(t + 0.5*hStep, tmp, K[3], fargs, params, relax)
+            f(K[3], t+0.5*hStep, tmp, fargs, matParams, params, relax, damping)
+
             elemSum!(tmp, X, K[3], 1.0, hStep)
-            f(t + hStep, tmp, K[4], fargs, params, relax)
+            f(K[4], t+hStep, tmp, fargs, matParams, params, relax, damping)
+
             elemSum!(tmp, X, K[1], K[2], K[3], K[4],
                 1.0, (1/6*hStep), (1/3*hStep), (1/3*hStep), (1/6*hStep))
             X .= tmp
+
         end
     end
 end

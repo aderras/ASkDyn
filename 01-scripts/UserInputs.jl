@@ -2,10 +2,10 @@ module UserInputs
 
     module Material
         j = 1.0
-        h = 0.0
-        a = 0.0
+        h = -0.0001 # Negative field is into the plane. +z points out of page
+        a = 0.01
         ed = 0.0
-        dz = 4*pi*ed
+        dz = 0.01 #4*pi*ed
         nx = 512
         ny = nx
         nz = 1
@@ -76,7 +76,7 @@ module UserInputs
         size = 0
         charge = 0
         loc = 0
-        fieldDuring = 1
+        fieldDuring = 0
         chirality = 0
     end
 
@@ -89,8 +89,10 @@ module UserInputs
         the field in the original struct. All structs are located in Params.jl
     =#
     Base.@kwdef mutable struct paramRanges
-        r = [7.0:12.0;] # "r" (radius) field comes from the struct icParams
+        # r = [7.0:12.0;] # "r" (radius) field comes from the struct icParams
         # pbc
+        # dz = [0.00001,0.0001,0.001,0.01,0.1]
+        # h = [-0.0001,-0.001,-0.01,-0.1,0.01,0.001,0.0001]
     end
 
     # All the paths for importing and exporting files
@@ -105,7 +107,7 @@ module UserInputs
         #     trunc(Int,rand()*10000))
 
         # If you would like to import pre-computed relaxation data and run
-        # dynamics, change the filename here. 
+        # dynamics, change the filename here.
         function outputSuffix(p)
             return string("_BC=",p.mp.pbc,"_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
             p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",

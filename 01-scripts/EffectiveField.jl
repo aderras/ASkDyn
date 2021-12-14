@@ -220,17 +220,22 @@ module EffectiveField
     #
     # out: (3, m, n) array defining effective field at every point in the
     # input array, mat
-    function effectivefield!(Heff::Array{Float64,3}, mat::Array{Float64,3}, p)
-        Heff .= 0.0 # Set initial value to zero
-        exchangefield!(Heff, mat, p.mp.j, p.mp.pbc)
-        if p.mp.h != 0 EffectiveField.zeemanfield!(Heff, mat, p.mp.h) end
-        if p.mp.a != 0.0 EffectiveField.dmifield!(Heff, mat, p.mp.a, p.mp.pbc) end
-        if p.mp.dz != 0.0 EffectiveField.pmafield!(Heff, mat, p.mp.dz) end
+    function effectivefield!(Heff::Array{Float64,3}, mat::Array{Float64,3},
+        matParams::Array{Any,1}, p)
 
-        if p.mp.ed != 0.0
+        Heff .= 0.0 # Set initial value to zero
+
+        j,h,a,ed,dz,v,pbc = matParams
+
+        exchangefield!(Heff, mat, j, pbc)
+        if h != 0 EffectiveField.zeemanfield!(Heff, mat, h) end
+        if a != 0.0 EffectiveField.dmifield!(Heff, mat, a, pbc) end
+        if dz != 0.0 EffectiveField.pmafield!(Heff, mat, dz) end
+
+        if ed != 0.0
             pp, mm, nn = size(mat)
             dipField = Array{Float64}(undef, pp, mm, nn)
-            dipField = EffectiveField.ddifield(mat, p.mp.ed, p.mp.pbc, p.mp.v)
+            dipField = EffectiveField.ddifield(mat, ed, pbc, p.mp.v)
             Heff = Heff + dipField
         end
 
@@ -244,7 +249,8 @@ module EffectiveField
 
     end
 
-    function addbc!(Heff::Array{Float64,3}, mat::Array{Float64,3}, bc)
+    function addbc!(Heff::Array{Float64,3}, mat::Array{Float64,3},bc)
+
         p,m,n = size(mat)
         ll = length(bc)
 
@@ -280,30 +286,30 @@ module EffectiveField
     #
     # out: nothing
     function exchangefield!(Heff::Array{Float64,3}, mat::Array{Float64,3},
-        J, pbc)
+        J::Float64, pbc)
 
-        p, m, n = size(mat)
+        p,m,n = size(mat)
         bcInt = round(Int64,pbc)
 
-        @avx for j in 1:n, i in 1:m-1, k in 1:p
+        for j in 1:n, i in 1:m-1, k in 1:p
             Heff[k,i,j] += mat[k,i+1,j]
         end
-        @avx for j in 1:n, i in 2:m, k in 1:p
+        for j in 1:n, i in 2:m, k in 1:p
             Heff[k,i,j] += mat[k,i-1,j]
         end
-        @avx for j in 1:n-1, i in 1:m, k in 1:p
+        for j in 1:n-1, i in 1:m, k in 1:p
             Heff[k,i,j] += mat[k,i,j+1]
         end
-        @avx for j in 2:n, i in 1:m, k in 1:p
+        for j in 2:n, i in 1:m, k in 1:p
             Heff[k,i,j] += mat[k,i,j-1]
         end
 
         if pbc==1.0
-            @avx for j in 1:n, k in 1:p
+            for j in 1:n, k in 1:p
                 Heff[k,m,j] += mat[k,1,j]
                 Heff[k,1,j] += mat[k,m,j]
             end
-            @avx for i in 1:m, k in 1:p
+            for i in 1:m, k in 1:p
                 Heff[k,i,1] += mat[k,i,n]
                 Heff[k,i,n] += mat[k,i,1]
             end
@@ -319,7 +325,8 @@ module EffectiveField
     # the result
     #
     # out: nothing
-    function dmifield!(Heff::Array{Float64,3}, mat::Array{Float64,3}, dmi, pbc)
+    function dmifield!(Heff::Array{Float64,3}, mat::Array{Float64,3},
+        dmi::Float64, pbc)
 
         p,m,n = size(mat)
 
@@ -399,7 +406,7 @@ module EffectiveField
         p, m, n = size(mat)
 
         for i in 1:m, j in 1:n, p in 3
-            Heff[p,i,j] = Heff[p,i,j] + Dz * mat[p, i, j]
+            Heff[p,i,j] = Heff[p,i,j] + Dz * mat[p,i,j]
         end
 
     end

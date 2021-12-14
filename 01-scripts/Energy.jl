@@ -176,7 +176,8 @@ module Energy
 
     end
 
-    # Computes the anisotropy energy of mat
+    # Computes the anisotropy energy of mat. dz>0 is uniaxial anisotropy in the
+    # z direction. (dz<0 would mean easy plane anisotropy in the xy plane)
     #
     # in: mat = spin matrix, dz = PMA constant
     #

@@ -56,6 +56,20 @@ module InitialCondition
                 mat[3,i] = vec[3]
 
             end
+        elseif t == "domainWall"
+            for i in eachindex(view(mat,1,1:Nx,1:Ny))
+
+                # If easy-axis anisotropy constant is not zero, the domain wall
+                # width is sqrt(J/Dz). If it is, set δ equal to user input
+                if mp.dz!=0.0 δ = sqrt(mp.j/mp.dz) else δ=l end
+
+                domainwallcomponent!(vec,δ,round(Int,i[2]-(ystart+1/2)))
+
+                mat[1,i] = vec[1]
+                mat[2,i] = vec[2]
+                mat[3,i] = vec[3]
+
+            end
         elseif t == "skyrmionAntiskyrmion"
             for i in eachindex(view(mat,1,1:Nx,1:Ny))
 
@@ -163,6 +177,25 @@ module InitialCondition
         val[1] = sperp*cos(Q*ang+ϕ)
         val[2] = sperp*sin(Q*ang+ϕ)
         val[3] = sz
+
+    end
+
+    # The following function can be either plus or minus. I'm choosing plus for
+    # now. This means θ(y=-∞) = 0 and θ(y = ∞)
+    @inline θ(y, δ) = 2.0*atan(exp(y/δ))
+
+    # The following defines a Bloch domain wall
+    #   Mx(y) = M_0 sin(θ(y))
+    #   My(y) = 0
+    #   Mz(y) = M_0 cos(θ(y))
+    # For normalization, M_0 = 1
+    # The result is a 3x1 vector stored in the `val` input variable
+    # δ is the domain wall width, y is the position in the plane
+    function domainwallcomponent!(val::Array{Float64,1}, δ::Float64, y::Int64)
+
+        val[1] = sin(θ(y, δ))
+        val[2] = 0.0
+        val[3] = cos(θ(y, δ))
 
     end
 

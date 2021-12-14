@@ -3,9 +3,7 @@ module SpinDynamics
 
     using HDF5, Energy, TopologicalCharge, LLequation, Magnetization, RungeKutta,
     LLequation, Normalize, NoiseRotation, Dates, EffectiveSize,
-    InitialCondition, Distributed, FieldAlignment, UserInputs, Chirality
-
-    using BenchmarkTools
+    InitialCondition, Distributed, FieldAlignment, UserInputs, Chirality, Helpers
 
     export launchcomputation, rundynamics!, runRelaxation!, computeLL!
 
@@ -73,7 +71,6 @@ module SpinDynamics
         if params.cp.temp !=0.0 && relaxation==false
             params.cp.nSteps = round(Int64,p.cp.nSteps/2)
         end
-
         allArrays = [[0.0] for i in 1:length(fieldnames(typeof(params.save)))]
 
         count = 1
@@ -104,14 +101,19 @@ module SpinDynamics
         K2 = zeros(p,m,n)
         K3 = zeros(p,m,n)
         K4 = zeros(p,m,n)
-        tmp = zeros(p,m,n);
+        tmp = zeros(p,m,n)
 
         stmp = zeros(p)
 
+        # Create arrays of parameter values to be passed into the LL compuataion
+        mpValues = [j, h, a, ed, dz, vdd, pbc]
+        cpValues = [params.cp.dt, params.cp.nn]
+
         for i in 1:maxLoop
 
-            @time computeLL!(mat, params, [Heff, SDotH], [K1, K2, K3, K4, tmp],
-                relaxation)
+            computeLL!(mat, mpValues, cpValues, params, [Heff, SDotH],
+                [K1, K2, K3, K4, tmp], relaxation)
+            # Gc.gc()
 
             en = energy(mat, params)
             allArrays[1][i] = en
@@ -188,24 +190,22 @@ module SpinDynamics
 
     end
 
-    function h5overwrite(name, array)
-        fid = h5open(name, "w")
-        write(fid, "Dataset1", array)
-        close(fid)
-    end
-
     # Calculates Landau Lifshitz equation
-    function computeLL!(s::Array{Float64,3}, params, fArgs, rkMatrices,
-        relaxation=false)
+    function computeLL!(s::Array{Float64,3}, mpValues::Array{Any,1},
+        cpValues::Array{Float64,1}, params, fArgs, rkMatrices, relaxation=false,
+        α=0.0)
 
         # This is the pulse-noise algorithm
         if params.cp.temp == 0.0
-            rk4!(0.0, s, RHS!, params, fArgs, rkMatrices, relaxation)
+            rk4!(s, 0.0, RHS!, fArgs, mpValues, cpValues, params, rkMatrices,
+                relaxation, α)
             normalizelattice!(s)
         else
-            rk4!(0.0, s, RHS!, params, fArgs, rkMatrices, relaxation)
+            rk4!(s, 0.0, RHS!, fArgs, mpValues, cpValues, params, rkMatrices,
+                relaxation, α)
             noisyrotate!(s, params.cp)
-            rk4!(0.0, s, RHS!, params,  fArgs, rkMatrices, relaxation)
+            rk4!(s, 0.0, RHS!, fArgs, mpValues, cpValues, params, rkMatrices,
+                relaxation, α)
             normalizelattice!(s)
         end
     end

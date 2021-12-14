@@ -29,7 +29,8 @@ module LLequation
     # introduces an error on the order of 1e-16. Interesting
     function dotSum!(dest, mat1, mat2)
         p, m, n = size(mat1)
-        @avx for i in 1:m, j in 1:n
+        # Used to have @avx, but now returns errors
+        for i in 1:m, j in 1:n
             dest[i,j] = 0
             for q in 1:p dest[i,j] += mat1[q,i,j]*mat2[q,i,j] end
         end
@@ -38,18 +39,20 @@ module LLequation
     end
 
     # Improved version
-    function RHS!(t::Float64,
+    function RHS!(matRHS::Array{Float64,3},
+            t::Float64,
             mat::Array{Float64,3},
-            matRHS::Array{Float64,3},
             rhsArgs,
+            mpValues::Array{Any,1},
             params,
-            relax=false)
+            relax=false,
+            damping=0.0)
 
         # If running relaxation, set damping to 1. Otherwise use user input.
-        if relax lambda = 1.0 else lambda = params.cp.damp end
+        if relax lambda = 1.0 else lambda = damping end
 
         # Calculate effective field.
-        effectivefield!(rhsArgs[1], mat, params)
+        effectivefield!(rhsArgs[1], mat, mpValues, params)
 
         # Calculate S dot H if damping is nonzero
         if lambda!=0.0 dotSum!(rhsArgs[2], mat, rhsArgs[1]) end
@@ -81,11 +84,10 @@ module LLequation
             matRHS[3,i,j] = mat[1,i,j]*Heff[2,i,j] - mat[2,i,j]*Heff[1,i,j]
         end
         if lambda != 0.0
-            @avx for i in 1:m, j in 1:n, k in 1:p
+            for i in 1:m, j in 1:n, k in 1:p
                 matRHS[k,i,k] += lambda*(Heff[3,i,j]-mat[3,i,j]*SDotH[i,j])
             end
         end
-
     end
 
     # Current implemented here.
