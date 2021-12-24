@@ -41,7 +41,7 @@ module SpinDynamics
             end
         end
 
-        rundynamics!(s0, p)
+        # rundynamics!(s0, p)
         println("Completed eval on worker ", myid())
 
     end
@@ -82,7 +82,6 @@ module SpinDynamics
         allArrays[1] = zeros(maxLoop)
         if params.ic.type == "skyrmion" allArrays[9] = zeros(maxLoop) end
 
-
         ########################################################################
         # Begin computation
 
@@ -97,11 +96,18 @@ module SpinDynamics
         SDotH = zeros(m,n)
 
         # Initialize arrays for the RK steps
+        tmp = zeros(p,m,n)
         K1 = zeros(p,m,n)
         K2 = zeros(p,m,n)
         K3 = zeros(p,m,n)
         K4 = zeros(p,m,n)
-        tmp = zeros(p,m,n)
+        if params.cp.solver==1
+            K5 = zeros(p,m,n)
+            K6 = zeros(p,m,n)
+            Kvec = [K1, K2, K3, K4, K5, K6, tmp]
+        else
+            Kvec = [K1, K2, K3, K4, tmp]
+        end
 
         stmp = zeros(p)
 
@@ -112,10 +118,10 @@ module SpinDynamics
         for i in 1:maxLoop
 
             computeLL!(mat, mpValues, cpValues, params, [Heff, SDotH],
-                [K1, K2, K3, K4, tmp], relaxation)
+                Kvec, relaxation)
             # Gc.gc()
 
-            en = energy(mat, params)
+            en = energy(mat, mpValues)
             allArrays[1][i] = en
             if params.save.excE == 1.0
                 allArrays[2][i] = exchange_energy(mat, j, pbc, params.defect)
@@ -160,8 +166,8 @@ module SpinDynamics
             end
 
             # Print if debugging
-            # println("i = ", i, ", E = ", allArrays[1][i], ", |Delta(E)| = ",
-                # abs(en-enPrev))
+            println("i = ", i, ", E = ", allArrays[1][i], ", |Delta(E)| = ",
+                abs(en-enPrev))
 
             # Check for collapse if this is a skyrmion
             if params.ic.type == "skyrmion"
@@ -169,6 +175,10 @@ module SpinDynamics
             end
             # Check for convergence with energy if this is relaxation
             if relaxation && i > 10 && abs(en-enPrev) < params.cp.tol break end
+            # If the energy is NaN, something went wrong
+            if isnan(en) break end
+
+
             enPrev = en
         end
 
@@ -190,6 +200,18 @@ module SpinDynamics
 
     end
 
+    function runRK!(s::Array{Float64,3}, mpValues::Array{Any,1},
+        cpValues::Array{Float64,1}, params, fArgs, rkMatrices, relaxation=false,
+        α=0.0)
+        if params.cp.solver == 0
+            rk4!(s, 0.0, RHS!, fArgs, mpValues, cpValues, params, rkMatrices,
+                relaxation, α)
+        elseif params.cp.solver == 1
+            rk5!(s, 0.0, RHS!, fArgs, mpValues, cpValues, params, rkMatrices,
+                relaxation, α)
+        end
+    end
+
     # Calculates Landau Lifshitz equation
     function computeLL!(s::Array{Float64,3}, mpValues::Array{Any,1},
         cpValues::Array{Float64,1}, params, fArgs, rkMatrices, relaxation=false,
@@ -197,15 +219,12 @@ module SpinDynamics
 
         # This is the pulse-noise algorithm
         if params.cp.temp == 0.0
-            rk4!(s, 0.0, RHS!, fArgs, mpValues, cpValues, params, rkMatrices,
-                relaxation, α)
+            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation, α)
             normalizelattice!(s)
         else
-            rk4!(s, 0.0, RHS!, fArgs, mpValues, cpValues, params, rkMatrices,
-                relaxation, α)
+            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation, α)
             noisyrotate!(s, params.cp)
-            rk4!(s, 0.0, RHS!, fArgs, mpValues, cpValues, params, rkMatrices,
-                relaxation, α)
+            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation, α)
             normalizelattice!(s)
         end
     end

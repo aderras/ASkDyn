@@ -47,7 +47,8 @@ module Params
     end
 
     mutable struct compParams
-        maxSteps::Int         # Maximum number of steps to make
+        solver::Int       # Float
+        maxSteps::Int     # Maximum number of steps to make
         dt::Float64       # Step size
         nn::Float64       # Skip this many steps to save
         tol::Float64      # Tolerance for convergence
@@ -137,7 +138,7 @@ module Params
     function buildparam()
 
         myMatParams = materialParams(0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, [])
-        myCompParams = compParams(0, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0, 0,0.0,0,0.0,0)
+        myCompParams = compParams(0, 0, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0, 0,0.0,0,0.0,0)
         myICParams = icParams("", 0, 0.0, 0, 0)
         myPinningParams = pinningParams(0.0)
         myDefectParams = defectParams(0, 0.0, 0.0, 0, 0, [])
@@ -258,7 +259,8 @@ module Params
             UserInputs.Material.ed, UserInputs.Material.nx, UserInputs.Material.ny,
             UserInputs.Material.nz, UserInputs.Material.pbc, v)
 
-        cp = compParams(UserInputs.Computation.maxSteps, UserInputs.Computation.dt,
+        cp = compParams(UserInputs.Computation.solver,
+            UserInputs.Computation.maxSteps, UserInputs.Computation.dt,
             UserInputs.Computation.nSteps, UserInputs.Computation.tol,
             UserInputs.Computation.damping, UserInputs.Computation.T,
             UserInputs.Computation.parallel, UserInputs.Computation.numCores,

@@ -2,14 +2,14 @@ module UserInputs
 
     module Material
         j = 1.0
-        h = -0.0001 # Negative field is into the plane. +z points out of page
-        a = 0.01
+        h = 0.0 # Negative field is into the plane. +z points out of page
+        a = 0.0
         ed = 0.0
-        dz = 0.01 #4*pi*ed
-        nx = 512
+        dz = 0.0 #4*pi*ed # Negative dz is into the plane
+        nx = 256
         ny = nx
         nz = 1
-        pbc = 5.0 # OPTIONS: Float between 1.0 and 6.0,
+        pbc = 0.0 # OPTIONS: Float between 1.0 and 6.0,
                   # 0.0=nothing, 1.0=pbc,
                   # 2.0/3.0 = 1st order backward euler, linear/quadratic interp
                   # 4.0/5.0 = 4th order backward euler, linear/quadratic interp
@@ -18,29 +18,30 @@ module UserInputs
 
     module Computation
         # Computation parameters
-        maxSteps = 10 # This is the maximum number of computation steps
+        solver = 0      # 0=RK4, 1=RK5
+        maxSteps = 1    # This is the maximum number of computation steps
         dt = 0.2
-        nSteps = 1
+        nSteps = 5
         tol = 10^-5
         damping = 0.0
         T = 0.0
         parallel = 0
         numCores = 1
-        runRelaxation = 0   # 0=import data if it exists, otherwise build initial
-                            # condition and run LLG, 1=LLG with damping set to
-                            # 1.0, 2=FA relaxation
+        runRelaxation = 1  # 0=import data if it exists, otherwise build initial
+                           # condition and run LLG, 1=LLG with damping set to
+                           # 1.0, 2=FA relaxation
 
         sMax = 1
         faConst = 0.3
         nRot = 10
         faTol = 10^-4
 
-        rChirality = 20    #MAKE SURE THIS MAKES SENSE
+        rChirality = 20    # MAKE SURE THIS MAKES SENSE
     end
 
     module InitialCondition
         import UserInputs.Material
-        type = "skyrmion"
+        type = "skyrmion" # OPTIONS: "skyrmion", "domainWall"
         r = 7.0
         chirality = pi/2
         icx = Material.nx/2
@@ -73,11 +74,11 @@ module UserInputs
         pmaE = 0
         ddiE = 0
         magn = 1
-        size = 0
-        charge = 0
+        size = 1
+        charge = 1
         loc = 0
         fieldDuring = 0
-        chirality = 0
+        chirality = 1
     end
 
     #=
@@ -89,8 +90,8 @@ module UserInputs
         the field in the original struct. All structs are located in Params.jl
     =#
     Base.@kwdef mutable struct paramRanges
-        # r = [7.0:12.0;] # "r" (radius) field comes from the struct icParams
-        # pbc
+        r = [5.0:12.0;]
+        # pbc = [2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
         # dz = [0.00001,0.0001,0.001,0.01,0.1]
         # h = [-0.0001,-0.001,-0.01,-0.1,0.01,0.001,0.0001]
     end
@@ -103,16 +104,20 @@ module UserInputs
     end
 
     module Filenames
+        using Helpers
         # timestampString = string(Dates.format(Dates.now(),"HH_MM_SS"),
         #     trunc(Int,rand()*10000))
 
         # If you would like to import pre-computed relaxation data and run
         # dynamics, change the filename here.
         function outputSuffix(p)
-            return string("_BC=",p.mp.pbc,"_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
-            p.mp.nz,"_J=",p.mp.j,"_H=",p.mp.h,"_A=",p.mp.a,"_DZ=",
-            round(p.mp.dz,digits=5),"_ED=",p.mp.ed,"_DT=",
-            p.cp.nn*p.cp.dt,".h5")
+            return string("_BC=",p.mp.pbc,"_NX=",
+                p.mp.nx,"_NY=",p.mp.ny,"_NZ=",p.mp.nz,
+                "_J=",p.mp.j,"_H=", p.mp.h,
+                "_A=",p.mp.a,"_DZ=",
+                # formatFloat2Str(round(p.mp.dz,digits=5)),"_ED=",
+                p.mp.ed,"_DT=",p.cp.nn*p.cp.dt,
+                "_R=",p.ic.r,".h5")
         end
         function inputName(p)
             return string("S_CONSTRAINED_NX=",p.mp.nx,"_NY=",p.mp.ny,"_NZ=",
