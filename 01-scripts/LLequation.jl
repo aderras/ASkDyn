@@ -28,9 +28,8 @@ module LLequation
     #
     # out: nothing
 
-
     # With @avx macro, this loop speeds up by 10x, but it
-    # introduces an error on the order of 1e-16. Interesting
+    # introduces an error on the order of 1e-16. Interesting.
     function dotSum!(dest, mat1, mat2)
         p, m, n = size(mat1)
         # Used to have @avx, but now returns errors
@@ -67,16 +66,6 @@ module LLequation
             addCurrent!(mat, matRHS, params.current)
         end
 
-        ## DELETE WHEN DONE ###################################################
-        # Instead of interpolating the effective field for fictitous spins,
-        # we can interpolate the time derivative of the edge spins based on the
-        # inner ones, taking care to interpolate only once at the corners.
-        # pbc = mpValues[end]
-        # if pbc>0
-        #     bcInt = round(Int64,pbc)
-        #     Helpers.interpEdges!(matRHS, BoundaryConditions.extrap[bcInt])
-        # end
-
     end
 
     # LLG implemented here.
@@ -98,7 +87,7 @@ module LLequation
         end
         if lambda != 0.0
             for i in 1:m, j in 1:n, k in 1:p
-                matRHS[k,i,k] += lambda*(Heff[k,i,j]-mat[k,i,j]*SDotH[i,j])
+                matRHS[k,i,j] += lambda*(Heff[k,i,j]-mat[k,i,j]*SDotH[i,j])
             end
         end
     end
