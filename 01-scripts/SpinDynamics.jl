@@ -41,7 +41,7 @@ module SpinDynamics
             end
         end
 
-        # rundynamics!(s0, p)
+        rundynamics!(s0, p)
         println("Completed eval on worker ", myid())
 
     end
@@ -57,6 +57,7 @@ module SpinDynamics
 
         j,h,a,dz,ed,nx,ny,nz,pbc,vdd =
             [getfield(params.mp, x) for x in fieldnames(typeof(params.mp))]
+        α = params.cp.damp
 
         # Directory where results are saved.
         reldir = UserInputs.Paths.output
@@ -118,7 +119,7 @@ module SpinDynamics
         for i in 1:maxLoop
 
             computeLL!(mat, mpValues, cpValues, params, [Heff, SDotH],
-                Kvec, relaxation)
+                Kvec, relaxation, α)
             # Gc.gc()
 
             en = energy(mat, mpValues)

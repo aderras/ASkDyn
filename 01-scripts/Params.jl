@@ -121,7 +121,7 @@ module Params
     mutable struct params
 
         mp          # materialParams
-        cp         # computationParams
+        cp          # computationParams
         ic          # icParams
         pin         # pinningParams
         defect      # defectParams
