@@ -3,10 +3,6 @@
     This module contains functions that calculate the energy of a
     spin lattice.
 
-    IMPROVEMENTS
-      + It would be more logical if defect params were an optional input for
-      exchange_energy
-
 =#
 module Energy
 
@@ -37,29 +33,6 @@ module Energy
 
         return en
 
-        # j,h,a,dz,ed,nx,ny,nz,pbc,vd = [getfield(params.mp, x)
-        #     for x in fieldnames(typeof(params.mp))]
-        #
-        # if params.defect.t == 0.0
-        #     en = exchange_energy(mat, j, pbc)
-        # else
-        #     en = exchange_energy_defect(mat, j, pbc, params.defect)
-        # end
-        #
-        # if h != 0.0
-        #     en += zeeman_energy(mat, h)
-        # end
-        # if a != 0.0
-        #     en += dmi_energy(mat, a, pbc)
-        # end
-        # if dz != 0.0
-        #     en += pma_energy(mat, dz)
-        # end
-        # if ed != 0.0
-        #     en += ddi_energy(mat, ed, pbc, vd)
-        # end
-        #
-        # return en
     end
 
     # Computes the zeeman energy of mat for external field Hext
@@ -123,7 +96,6 @@ module Energy
         return en
 
     end
-
 
     # Computes the exchange energy of mat
     #

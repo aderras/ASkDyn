@@ -51,9 +51,8 @@ module SpinDynamics
     # out: returns nothing. Modifies mat and exports data to disk
     function rundynamics!(mat::Array{Float64,3}, params, relaxation=false)
 
-        maxLoop = params.cp.maxSteps
 
-        ########################################################################
+        maxLoop = params.cp.maxSteps
 
         j,h,a,dz,ed,nx,ny,nz,pbc,vdd =
             [getfield(params.mp, x) for x in fieldnames(typeof(params.mp))]
@@ -63,46 +62,49 @@ module SpinDynamics
         reldir = UserInputs.Paths.output
 
         # Suffix used to distinguish files. Append "relaxation" if applicable
-        filesuffix = UserInputs.Filenames.outputSuffix(params)
-
-        if relaxation filesuffix = string("_RELAXATION", filesuffix) end
+        filesuffix = UserInputs.Filenames.outputSuffix()
+        if relaxation filesuffix = string("relaxation", filesuffix) end
 
         # If temperature is nonzero, divide tFree by 2 so that we apply noise
         # rotation halfway through (see computLL!() below)
         if params.cp.temp !=0.0 && relaxation==false
             params.cp.nSteps = round(Int64,p.cp.nSteps/2)
         end
+
+        ########################################################################
+        # Initialize storage
+
+        # allArrays is an arrays of arrays. Each element is a 1D array storing
+        # parameter values throughout the computation.
         allArrays = [[0.0] for i in 1:length(fieldnames(typeof(params.save)))]
 
+        # Initialize arrays for all parameters user asked to save. All others
+        # remain [0.0].
         count = 1
         for x in fieldnames(typeof(params.save))
             if getfield(params.save, x)==1 allArrays[count] = zeros(maxLoop) end
             count = count+1
         end
+
         # Always measure the energy. Also always measure Q if this is a skyrmion
-        allArrays[1] = zeros(maxLoop)
+        # Initialize arrays for both.
+        if params.save.en == 0 allArrays[1] = zeros(maxLoop) end
         if params.ic.type == "skyrmion" allArrays[9] = zeros(maxLoop) end
 
-        ########################################################################
-        # Begin computation
-
-        # Stopping criteria: energy converges to within some tolerance
-        # or topological charge becomes negative
-        en = 10.0
-        enPrev = 0.0
 
         p,m,n = size(mat)
 
+        # Initialize matrices for the LLG equation calculation
         Heff = zeros(p,m,n)
         SDotH = zeros(m,n)
 
-        # Initialize arrays for the RK steps
+        # Initialize arrays for the Runge Kutta solver
         tmp = zeros(p,m,n)
         K1 = zeros(p,m,n)
         K2 = zeros(p,m,n)
         K3 = zeros(p,m,n)
         K4 = zeros(p,m,n)
-        if params.cp.solver==1
+        if params.cp.solver==1 # If user requested 6th order solver
             K5 = zeros(p,m,n)
             K6 = zeros(p,m,n)
             Kvec = [K1, K2, K3, K4, K5, K6, tmp]
@@ -116,11 +118,26 @@ module SpinDynamics
         mpValues = [j, h, a, ed, dz, vdd, pbc]
         cpValues = [params.cp.dt, params.cp.nn]
 
+        ########################################################################
+        # Begin computation
+
+        # Stopping criteria: energy converges to within some tolerance
+        # or topological charge becomes negative
+        en = 10.0
+        enPrev = 0.0
+
         for i in 1:maxLoop
 
             computeLL!(mat, mpValues, cpValues, params, [Heff, SDotH],
                 Kvec, relaxation, α)
-            # Gc.gc()
+
+            # According to some julia discussion boards, it may be useful to
+            # call the garbage collector when you modify elements of an array
+            # several times. This slows down the solver though. 
+            # GC.gc()
+            # GC.gc()
+            # GC.gc()
+            # GC.gc()
 
             en = energy(mat, mpValues)
             allArrays[1][i] = en
