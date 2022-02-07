@@ -6,7 +6,7 @@ module UserInputs
         a = 0.0
         ed = 0.0
         dz = 0.0 #4*pi*ed # Negative dz is into the plane
-        nx = 128
+        nx = 1024
         ny = nx
         nz = 1
         pbc = 0.0 # OPTIONS: Float between 1.0 and 6.0,
@@ -89,7 +89,7 @@ module UserInputs
         the field in the original struct. All structs are located in Params.jl
     =#
     Base.@kwdef mutable struct paramRanges
-        r = [5.0:7.0;]
+        r = [5.0:20.0;]
         # damp = [0.01,1.0]
         # pbc = [2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
         # dz = [0.00001,0.0001,0.001,0.01,0.1]
@@ -107,23 +107,25 @@ module UserInputs
         # timestampString = string(Dates.format(Dates.now(),"HH_MM_SS"),
         #     trunc(Int,rand()*10000))
         using Params, Helpers
-        p = Params.buildUserInputParam()
 
-        # Choose labels and parameters here. Make sure order is correct.
+        # Choose labels and parameters here. Make sure order and elements match
+        # elements of values(p).
         labels = ["bc","nx","ny","nz","j","h","a","dz","ed","r","dt"]
         labels = [string("_",l) for l in labels]
 
-        values = [p.mp.pbc, string(p.mp.nx), p.mp.ny, p.mp.nz, p.mp.j, p.mp.h,
-            p.mp.a, p.mp.dz, p.mp.ed, p.ic.r, p.cp.dt*p.cp.nn]
+        function values(p)
+            return [p.mp.pbc, string(p.mp.nx), p.mp.ny, p.mp.nz, p.mp.j, p.mp.h,
+                    p.mp.a, p.mp.dz, p.mp.ed, p.ic.r, p.cp.dt*p.cp.nn]
+        end
 
-        function outputSuffix()
-            return string(zipFlatten(labels,values),".h5")
+        function outputSuffix(p)
+            return string(zipFlatten(labels,values(p)),".h5")
         end
 
         # If you would like to import pre-computed relaxation data and run
         # dynamics, change the filename here.
-        function inputName()
-            return string("s_final",zipFlatten(labels,values),".h5")
+        function inputName(p)
+            return string("s_final",zipFlatten(labels,values(p)),".h5")
         end
 
         exch = "exchange"

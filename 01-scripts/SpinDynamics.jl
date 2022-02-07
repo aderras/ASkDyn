@@ -62,7 +62,7 @@ module SpinDynamics
         reldir = UserInputs.Paths.output
 
         # Suffix used to distinguish files. Append "relaxation" if applicable
-        filesuffix = UserInputs.Filenames.outputSuffix()
+        filesuffix = UserInputs.Filenames.outputSuffix(params)
         if relaxation filesuffix = string("relaxation", filesuffix) end
 
         # If temperature is nonzero, divide tFree by 2 so that we apply noise
@@ -133,7 +133,7 @@ module SpinDynamics
 
             # According to some julia discussion boards, it may be useful to
             # call the garbage collector when you modify elements of an array
-            # several times. This slows down the solver though. 
+            # several times. This slows down the solver though.
             # GC.gc()
             # GC.gc()
             # GC.gc()
