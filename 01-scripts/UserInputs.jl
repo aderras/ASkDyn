@@ -23,7 +23,11 @@ module UserInputs
         Given a struct name and a list of tuples each containing the arguments of
         the struct, return a list of structs of type structName.
       =#
-      return buildStructFromTuple.(structName, itemizedArgs)
+      if length(itemizedArgs)==1
+          return [buildStructFromTuple.(structName, itemizedArgs)]
+      else
+          return buildStructFromTuple.(structName, itemizedArgs)
+      end
     end
 
     j = 1.0
@@ -151,6 +155,8 @@ module UserInputs
 
 
     ## END USER INPUTS ########################################################
+
+    # Create structs to be used by the program
     mpItems = itemizedList(j, h, a, ed, dz, nx, ny, nz, bc, ed)
     cpItems = itemizedList(solver, maxSteps, dt, nSteps, tol, damping,
         T, parallel, numCores, runRelaxation, sMax, faConst, nRot, faTol,
@@ -170,7 +176,7 @@ module UserInputs
     curr = buildItemizedStruct(Params.currentParams, currItems)
     save = buildItemizedStruct(Params.saveChoices, saveItems)
 
-    paramItems = itemizedList(mp, [cp], [ic], [pin], [dp], [curr], [save])
+    paramItems = itemizedList(mp, cp, ic, pin, dp, curr, save)
     paramObjs = buildItemizedStruct(Params.params, paramItems)
 
 end
