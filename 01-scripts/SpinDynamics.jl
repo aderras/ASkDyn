@@ -1,9 +1,10 @@
 # This module contains functions that call the numerical solver.
 module SpinDynamics
 
-    using HDF5, Energy, TopologicalCharge, LLequation, Magnetization, RungeKutta,
-    LLequation, Normalize, NoiseRotation, Dates, EffectiveSize,
-    InitialCondition, Distributed, FieldAlignment, UserInputs, Chirality, Helpers
+    using HDF5, Energy, TopologicalCharge, LLequation, Magnetization,
+    RungeKutta, LLequation, Normalize, NoiseRotation, Dates, EffectiveSize,
+    InitialCondition, Distributed, FieldAlignment, UserInputs, Chirality,
+    Helpers
 
     export launchcomputation, rundynamics!, runRelaxation!, computeLL!
 
@@ -17,12 +18,10 @@ module SpinDynamics
             println("Computing relaxation with LLG and high damping.")
             s0 = buildinitial(p.ic, p.mp)
             rundynamics!(s0, p, true)
-
         elseif p.cp.relax == 2
             println("Computing relaxation with field-alignment algorithm.")
             s0 = buildinitial(p.ic, p.mp)
             runfieldalignment!(s0, p)
-
         else
             # Check for starting data
             inputDir = UserInputs.Paths.initialConds
@@ -40,17 +39,14 @@ module SpinDynamics
                 s0 = buildinitial(p.ic, p.mp)
             end
         end
-
         rundynamics!(s0, p)
         println("Completed eval on worker ", myid())
-
     end
 
     # in: mat = (N,N,3) initial condition, params struct, optional relaxation
     # boolean determines whether to set damping to 1.0 or keep user input.
     # out: returns nothing. Modifies mat and exports data to disk
     function rundynamics!(mat::Array{Float64,3}, params, relaxation=false)
-
 
         maxLoop = params.cp.maxSteps
 
@@ -63,12 +59,17 @@ module SpinDynamics
 
         # Suffix used to distinguish files. Append "relaxation" if applicable
         filesuffix = UserInputs.Filenames.outputSuffix(params)
+
+        timestamp = Dates.format(Dates.DateTime(Dates.now()), "_yyyy-m-d_HMSsss")
+
         if relaxation filesuffix = string("relaxation", filesuffix) end
 
         # If temperature is nonzero, divide tFree by 2 so that we apply noise
         # rotation halfway through (see computLL!() below)
         if params.cp.temp !=0.0 && relaxation==false
-            params.cp.nSteps = round(Int64,p.cp.nSteps/2)
+            params.cp.nn%2==0 || error("compParams.nn must be even.")
+            println("Halving the number of steps for nonzero temperature.")
+            params.cp.nn = round(Int64,params.cp.nn/2)
         end
 
         ########################################################################
@@ -88,9 +89,8 @@ module SpinDynamics
 
         # Always measure the energy. Also always measure Q if this is a skyrmion
         # Initialize arrays for both.
-        if params.save.en == 0 allArrays[1] = zeros(maxLoop) end
+        if params.save.totE == 0 allArrays[1] = zeros(maxLoop) end
         if params.ic.type == "skyrmion" allArrays[9] = zeros(maxLoop) end
-
 
         p,m,n = size(mat)
 
@@ -112,7 +112,8 @@ module SpinDynamics
             Kvec = [K1, K2, K3, K4, tmp]
         end
 
-        stmp = zeros(p)
+        stmp1 = zeros(p)
+        stmp2 = zeros(p)
 
         # Create arrays of parameter values to be passed into the LL compuataion
         mpValues = [j, h, a, ed, dz, vdd, pbc]
@@ -129,7 +130,7 @@ module SpinDynamics
         for i in 1:maxLoop
 
             computeLL!(mat, mpValues, cpValues, params, [Heff, SDotH],
-                Kvec, relaxation, α)
+                Kvec, [stmp1, stmp2], relaxation, α)
 
             # According to some julia discussion boards, it may be useful to
             # call the garbage collector when you modify elements of an array
@@ -179,13 +180,13 @@ module SpinDynamics
                 end
             end
             if params.save.chir == 1.0
-                allArrays[12][i] = Chirality.computeGamma(stmp, mat,
+                allArrays[12][i] = Chirality.computeGamma(stmp1, mat,
                     params.cp.rChirality)
             end
 
-            # Print if debugging
-            println("i = ", i, ", E = ", allArrays[1][i], ", |Delta(E)| = ",
-                abs(en-enPrev))
+            # # Print if debugging
+            # println("i = ", i, ", E = ", allArrays[1][i], ", |Delta(E)| = ",
+            #     abs(en-enPrev), ", Q = ", allArrays[9][i])
 
             # Check for collapse if this is a skyrmion
             if params.ic.type == "skyrmion"
@@ -195,7 +196,6 @@ module SpinDynamics
             if relaxation && i > 10 && abs(en-enPrev) < params.cp.tol break end
             # If the energy is NaN, something went wrong
             if isnan(en) break end
-
 
             enPrev = en
         end
@@ -232,17 +232,22 @@ module SpinDynamics
 
     # Calculates Landau Lifshitz equation
     function computeLL!(s::Array{Float64,3}, mpValues::Array{Any,1},
-        cpValues::Array{Float64,1}, params, fArgs, rkMatrices, relaxation=false,
+        cpValues::Array{Float64,1}, params, fArgs,
+        rkMatrices::Vector{Array{Float64,3}},
+        tmps::Vector{Vector{Float64}}, relaxation=false,
         α=0.0)
 
         # This is the pulse-noise algorithm
         if params.cp.temp == 0.0
-            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation, α)
+            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation,
+                    α)
             normalizelattice!(s)
         else
-            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation, α)
-            noisyrotate!(s, params.cp)
-            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation, α)
+            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation,
+                    α)
+            noisyrotate!(s,tmps, cpValues, α, params.cp.temp)
+            runRK!(s, mpValues, cpValues, params, fArgs, rkMatrices, relaxation,
+                    α)
             normalizelattice!(s)
         end
     end
