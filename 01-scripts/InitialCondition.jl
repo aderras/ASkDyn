@@ -49,7 +49,7 @@ module InitialCondition
         if t == "skyrmion"
             for i in eachindex(view(mat,1,1:Nx,1:Ny))
 
-               skyrmioncomponent!(vec,i[1]-(xstart+1/2),i[2]-(ystart+1/2),l)
+               skyrmioncomponent!(vec,i[1]-(xstart),i[2]-(ystart),l)
 
                 mat[1,i] = -vec[1]
                 mat[2,i] = -vec[2]
@@ -161,22 +161,10 @@ module InitialCondition
         Q = 1.
         ϕ = pi/2
 
-        rsquared = sz = sperp = ang = 0.
-
-        rsquared = x^2+y^2
-        sz = -(rsquared-λ^2)/(rsquared+λ^2)
-        sperp = sqrt(1-sz^2)
-
-        if y>0
-            ang = acos(x/sqrt(rsquared))
-        else
-            ang = 2*pi-acos(x/sqrt(rsquared))
-        end
-
-        # for some reason allocating this way leads to smaller allocation time
-        val[1] = sperp*cos(Q*ang+ϕ)
-        val[2] = sperp*sin(Q*ang+ϕ)
-        val[3] = sz
+        denom = x^2 + y^2 + λ^2
+        val[1] = -2.0*λ*(x*cos(ϕ)-y*sin(ϕ))/denom
+        val[2] = -2.0*λ*(y*cos(ϕ)+x*sin(ϕ))/denom
+        val[3] = -(x^2 + y^2 - λ^2)/denom
 
     end
 
@@ -197,6 +185,21 @@ module InitialCondition
         val[2] = 0.0
         val[3] = cos(θ(y, δ))
 
+    end
+
+    function buildSkyrmion!(mat,l)
+
+        Nz,Ny,Nx = size(mat)
+        xstart = ystart = Nx/2
+
+        vec = zeros(3)
+
+        for i in eachindex(view(mat,1,1:Nx,1:Ny))
+           skyrmioncomponent!(vec,i[1]-(xstart),i[2]-(ystart),l)
+            mat[1,i] = -vec[1]
+            mat[2,i] = -vec[2]
+            mat[3,i] = vec[3]
+        end
     end
 
 end

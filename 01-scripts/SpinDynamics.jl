@@ -58,11 +58,9 @@ module SpinDynamics
         reldir = UserInputs.Paths.output
 
         # Suffix used to distinguish files. Append "relaxation" if applicable
-        filesuffix = UserInputs.Filenames.outputSuffix(params)
-
         timestamp = Dates.format(Dates.DateTime(Dates.now()), "_yyyy-m-d_HMSsss")
-
-        if relaxation filesuffix = string("relaxation", filesuffix) end
+        filesuffix = string(UserInputs.Filenames.outputSuffix(params),timestamp,".h5")
+        if relaxation filesuffix = string("_relaxation", filesuffix) end
 
         # If temperature is nonzero, divide tFree by 2 so that we apply noise
         # rotation halfway through (see computLL!() below)
@@ -86,6 +84,10 @@ module SpinDynamics
             if getfield(params.save, x)==1 allArrays[count] = zeros(maxLoop) end
             count = count+1
         end
+
+        # If you are saving the location of the skyrmion, initialize a (2,maxloop)
+        # array to store
+        if params.save.location==1.0 allArrays[10] = zeros(2*maxLoop) end
 
         # Always measure the energy. Also always measure Q if this is a skyrmion
         # Initialize arrays for both.
@@ -129,7 +131,7 @@ module SpinDynamics
 
         for i in 1:maxLoop
 
-            computeLL!(mat, mpValues, cpValues, params, [Heff, SDotH],
+            @time computeLL!(mat, mpValues, cpValues, params, [Heff, SDotH],
                 Kvec, [stmp1, stmp2], relaxation, α)
 
             # According to some julia discussion boards, it may be useful to
@@ -140,10 +142,10 @@ module SpinDynamics
             # GC.gc()
             # GC.gc()
 
-            en = energy(mat, mpValues)
+            en = energy(mat, mpValues, params.defect.jmat)
             allArrays[1][i] = en
             if params.save.excE == 1.0
-                allArrays[2][i] = exchange_energy(mat, j, pbc, params.defect)
+                allArrays[2][i] = exchange_energy(mat, j, pbc)
             end
             if params.save.zeeE == 1.0
                 allArrays[3][i] = zeeman_energy(mat, h)
@@ -165,12 +167,10 @@ module SpinDynamics
             end
             if params.ic.type == "skyrmion" allArrays[9][i] = calcQ(mat) end
 
-            # THE FOLLOWING LOCATION SAVER IS INCORRECT
             if params.save.location == 1.0
-                # @views maxPos = argmax(mat[3,:,:])
-                # locArray[(i*2-1)] = maxPos[1]
-                # locArray[i*2] = maxPos[2]
-                allArrays[10][i] = 0.0
+                cartCoords = argmax(view(mat,3,:,:))
+                allArrays[10][i*2-1] = cartCoords[1]
+                allArrays[10][i*2] = cartCoords[2]
             end
             if params.save.spinField == 1.0
                 if i%1 ==0
@@ -194,8 +194,9 @@ module SpinDynamics
             end
             # Check for convergence with energy if this is relaxation
             if relaxation && i > 10 && abs(en-enPrev) < params.cp.tol break end
+
             # If the energy is NaN, something went wrong
-            if isnan(en) break end
+            !isnan(en) || error("Energy is nan")
 
             enPrev = en
         end
@@ -204,10 +205,20 @@ module SpinDynamics
         # the same computation multiple times.
         count = 1
         for x in fieldnames(typeof(params.save))
-            if getfield(params.save, x)==1
+            if count == 10
+                nonzeroLocs = filter(x->x!=0.0,allArrays[count])
+                locMatrix = zeros(2, round(Int64,length(nonzeroLocs)/2))
+                locMatrix[1,:] = nonzeroLocs[1:2:end]
+                locMatrix[2,:] = nonzeroLocs[2:2:end]
                 h5overwrite(string(reldir,
                     UserInputs.Filenames.allFilenames[count], filesuffix),
-                    filter(x->x!=0.0,allArrays[count]))
+                    locMatrix)
+            else
+                if getfield(params.save, x)==1
+                    h5overwrite(string(reldir,
+                        UserInputs.Filenames.allFilenames[count], filesuffix),
+                        filter(x->x!=0.0,allArrays[count]))
+                end
             end
             count = count+1
         end
@@ -215,7 +226,6 @@ module SpinDynamics
         # Always save the final spin field
         h5overwrite(string(reldir,UserInputs.Filenames.finalField,filesuffix)
             ,mat)
-
     end
 
     function runRK!(s::Array{Float64,3}, mpValues::Array{Any,1},
@@ -232,7 +242,7 @@ module SpinDynamics
 
     # Calculates Landau Lifshitz equation
     function computeLL!(s::Array{Float64,3}, mpValues::Array{Any,1},
-        cpValues::Array{Float64,1}, params, fArgs,
+        cpValues::Array{Float64,1}, params, fArgs::Vector{Array{Float64}},
         rkMatrices::Vector{Array{Float64,3}},
         tmps::Vector{Vector{Float64}}, relaxation=false,
         α=0.0)

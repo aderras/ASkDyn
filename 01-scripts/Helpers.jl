@@ -2,16 +2,29 @@ module Helpers
 
     using Printf    # Use this package to control output numbers
     using HDF5
-    export h5overwrite, formatFloat2Str, zipFlatten
+    export h5overwrite, formatFloat2Str, zipFlatten, h5overwriteMulti
 
     # Export a file to hdf5 format
     #
     # in: name=full path of the export object, obj=array to export
     # out: nothing
-    function h5overwrite(name::String, obj)
+    function h5overwrite(name::String, obj, fieldname="Dataset1")
         fid = h5open(name, "w")
-        write(fid, "Dataset1", obj)
+        write(fid, fieldname, obj)
         close(fid)
+    end
+
+    function h5overwriteMulti(filename::String, fieldnames, objs)
+        if length(objs)!=length(fieldnames)
+            print("Error saving data: length(objs)!=length(fieldnames)")
+        end
+
+        fid = h5open(filename, "w")
+        for i in 1:length(objs)
+            write(fid, fieldnames[i], objs[i])
+        end
+        close(fid)
+
     end
 
     # Convert a float in scientific notation to a string in standard form
@@ -46,5 +59,31 @@ module Helpers
         c = ""
         for (x, y) in zip(a, b) c = string(c, x, y) end
         return c
+    end
+
+
+    #=
+        The following functions are used to compute convolution with a
+        nonuniform Fourier transform. May delete if that idea doesn't work.
+    =#
+    function skipGrid1dIndices(N::Int, skip::Int=2)
+        indices = Array{Int64,1}(undef,N)
+        nMax = round(Int64,N/skip)
+        indices = [skip*n for n in 1:nMax]
+        return indices
+    end
+
+    function skipGrid2dIndices(Nx::Int, Ny::Int, skip::Int=2)
+        colValues = skipGrid1dIndices(Nx, skip)
+        rowValues = skipGrid1dIndices(Ny, skip)
+
+        rowcols = Array{Int,3}(undef,2, length(rowValues), length(colValues))
+        for i in 1:length(rowValues)
+            for j in 1:length(colValues)
+                rowcols[1,i,j] = rowValues[i]
+                rowcols[2,i,j] = colValues[j]
+            end
+        end
+        return rowcols
     end
 end

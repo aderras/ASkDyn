@@ -22,12 +22,6 @@
 =#
 module Params
 
-    using Dipolar, EffectiveField, UserInputs
-    export getParams, buildparam, params, getparamlist!,
-        setfield_nestedstruct!, getconfirmation
-    export materialParams, llgParams, faParams, icParams, pinningParams,
-        defectParams, currentParams, saveChoices, params
-
     # Material parameters
     mutable struct materialParams
 
@@ -91,7 +85,7 @@ module Params
         width::Float64      # Width of impact
         dx::Int           # x position (0 < dx < nx)
         dy::Int           # y position (0 < dy < ny)
-        # jMat
+        jmat
     end
 
     mutable struct currentParams

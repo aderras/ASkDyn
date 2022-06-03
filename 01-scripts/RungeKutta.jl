@@ -22,7 +22,6 @@ module RungeKutta
         B::Array{Float64,3}, a::Float64, b::Float64)
         p,m,n = size(A)
         # Used to have @avx
-
         for i in 1:m, j in 1:m, k in 1:p
            dest[k,i,j] = a*A[k,i,j] + b*B[k,i,j]
         end
@@ -35,6 +34,16 @@ module RungeKutta
         # Used to have @avx
         for i in 1:m, j in 1:m, k in 1:p
            dest[k,i,j] = a*A[k,i,j] + b*B[k,i,j] + c*C[k,i,j]
+        end
+    end
+
+    function elemSum!(dest::Array{Float64,3}, A::Array{Float64,3},
+            B::Array{Float64,3}, C::Array{Float64,3}, D::Array{Float64,3},
+            a::Float64, b::Float64, c::Float64, d::Float64)
+        p,m,n = size(A)
+        # Used to have @avx
+        for i in 1:m, j in 1:m, k in 1:p
+           dest[k,i,j] = a*A[k,i,j] + b*B[k,i,j] + c*C[k,i,j] + d*D[k,i,j]
         end
     end
 
@@ -52,8 +61,8 @@ module RungeKutta
 
     function elemSum!(dest::Array{Float64,3}, A::Array{Float64,3},
             B::Array{Float64,3}, C::Array{Float64,3},D::Array{Float64,3},
-            E::Array{Float64,3}, F::Array{Float64,3}, a::Float64, b::Float64, c::Float64, d::Float64,
-            e::Float64, f::Float64)
+            E::Array{Float64,3}, F::Array{Float64,3}, a::Float64, b::Float64,
+            c::Float64, d::Float64, e::Float64, f::Float64)
         p,m,n = size(A)
         # Used to have @avx
         for i in 1:m, j in 1:m, k in 1:p
@@ -92,7 +101,7 @@ module RungeKutta
             f(K[4], t+hStep, tmp, fargs, matParams, params, relax, damping)
 
             elemSum!(tmp, X, K[1], K[2], K[3], K[4],
-                1.0, (1/6*hStep), (1/3*hStep), (1/3*hStep), (1/6*hStep))
+                1.0, hStep/6, hStep/3, hStep/3, hStep/6)
             X .= tmp
 
         end

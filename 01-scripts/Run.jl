@@ -1,13 +1,12 @@
 #!/usr/bin/env julia1
 push!(LOAD_PATH, pwd())
-using Distributed, SpinDynamics, BenchmarkTools, UserInputs
-using InitialCondition, EffectiveField, Energy, EffectiveSize, Dipolar
+using Distributed, UserInputs, SpinDynamics
 
 allParams = UserInputs.paramObjs
 
-if userParams.cp.parallel == 1
+if allParams[1].cp.parallel == 1
 
-  addprocs(userParams.cp.numCores)
+  addprocs(allParams[1].cp.numCores)
   println("Initializing parallel cores. Number of processors = ", nprocs(),
         ", number of workers = ", nworkers())
 

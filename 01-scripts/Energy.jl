@@ -20,11 +20,16 @@ module Energy
     # compute DDI (optional argument)
     #
     # out: Float
-    function energy(mat::Array{Float64,3}, mpValues)
+    function energy(mat::Array{Float64,3}, mpValues, jmat=[])
 
+        j,h,a,ed,dz,vd,bc = mpValues
+        pbc = (bc==1.0)
 
-        j,h,a,ed,dz,vd,pbc = mpValues
-        en = exchange_energy(mat, j, pbc)
+        if length(jmat[1])!=0.0
+            en = DefectFunctions.exchange_energy(mat, jmat, pbc)
+        else
+            en = exchange_energy(mat, j, pbc)
+        end
 
         if h != 0.0 en += zeeman_energy(mat, h) end
         if a != 0.0 en += dmi_energy(mat, a, pbc) end
@@ -62,7 +67,7 @@ module Energy
     # conditions
     #
     # out: float
-    function dmi_energy(mat::Array{Float64,3}, a::Float64, pbc::Float64)
+    function dmi_energy(mat::Array{Float64,3}, a::Float64, pbc)
 
         p, m, n = size(mat)
         en = 0.0
@@ -82,7 +87,7 @@ module Energy
         end
 
         # Deal with the edge of the matrix. If periodic boundary
-        if pbc==1.0
+        if pbc
             for i in 1:n
                 en += (mat[2,1,i]*mat[3,m,i] - mat[3,1,i]*mat[2,m,i])
             end
@@ -103,7 +108,7 @@ module Energy
     # conditions
     #
     # out: float
-    function exchange_energy(mat::Array{Float64,3}, J::Float64, pbc::Float64)
+    function exchange_energy(mat::Array{Float64,3}, J::Float64, pbc)
 
         p, m, n = size(mat)
         en = 0.0
@@ -116,7 +121,7 @@ module Energy
             en += mat[k,i,j] * mat[k,i,j+1]
         end
 
-        if pbc==1.0 # periodic boundary conditions
+        if pbc # periodic boundary conditions
             for j in 1:n, k in 1:p
                 en += mat[k,1,j] * mat[k,m,j]
             end
@@ -138,7 +143,7 @@ module Energy
     #
     # out: float
     function ddi_energy(mat::Array{Float64,3}, ed::Float64,
-        pbc::Float64, phiMatrices::Array{Array{Float64,2},1})
+        pbc, phiMatrices::Array{Array{Float64,2},1})
 
         if ed == 0
             return 0.0

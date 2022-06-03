@@ -3,4 +3,8 @@
 01-scripts/SaveInitialCond.jl
 01-scripts/WindowCalcs.jl
 01-scripts/RunPrecessingSpin.jl
+01-scripts/RunThermalCollapse.jl
+01-scripts/RunDefectOrbit.jl
+01-scripts/UserInputsDefectOrbit.jl
+01-scripts/UserInputsThermalCollapse.jl
 02-data/post-proc/*
