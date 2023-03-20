@@ -15,7 +15,11 @@ Required libraries:
 
 ## Background
 
-This code was written to study the behavior of skyrmions, topologically protected quasiparticles made up of atomic spins in magnetic materials. These spins obey the Landau-Lifshitz-Gilbert equation, which is implemented in this project.
+This code was written to study the behavior of skyrmions, topologically protected quasiparticles made up of atomic spins in magnetic materials. These spins obey the Landau-Lifshitz-Gilbert equation, which is implemented in this project. An example of the time evolution of spins is shown below.
+
+<p align="center">
+  <img src="https://github.com/aderras/ASkDyn/blob/main/spin-precession.gif" />
+</p>
 
 ## Usage
 
